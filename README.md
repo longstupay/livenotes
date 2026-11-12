@@ -327,3 +327,7 @@ python tools/stress_live.py --tracks 1,3,5,10 --duration 7200 --warmup 60 \
 - [`docs/25-desktop-workspace-implementation.md`](docs/25-desktop-workspace-implementation.md) 单窗口工作区 M1–M4：实现、验收与已知限制
 - [`docs/26-ui-theme-b.md`](docs/26-ui-theme-b.md) Studio / Paper 主题：配色、窗口按钮与验收截图
 - [`docs/27-process-lifecycle.md`](docs/27-process-lifecycle.md) 进程生命周期：关窗语义、Job Object、单实例接管与开发态回收
+
+## 许可证
+
+[MIT](LICENSE)。安全问题请按 [SECURITY.md](SECURITY.md) 私下报告。
