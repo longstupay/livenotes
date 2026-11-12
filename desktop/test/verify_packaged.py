@@ -4,7 +4,7 @@
 两种模式：
 
     # 1) 整个安装目录（壳 + resources/engine + models）
-    python desktop/test/verify_packaged.py --install-dir "E:\\...\\d5install"
+    python desktop/test/verify_packaged.py --install-dir "C:\\path\\to\\d5install"
 
     # 2) 只验 PyInstaller 的 engine.exe（还没有 NSIS 包时）
     python desktop/test/verify_packaged.py --engine "desktop/src-tauri/resources/engine/engine.exe"

@@ -67,16 +67,18 @@ Python、模型、ffmpeg 在安装包里都带着（打包态），用户机器�
 
 | 依赖 | 检查命令 | 本机状态 |
 |---|---|---|
-| Visual Studio 2022 + C++ 桌面开发 | 看 `C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat` 是否存在 | ✅ |
-| Rust stable-msvc | `%USERPROFILE%\toolchains\cargo\bin\cargo.exe --version` | ✅（脚本会自动设 `CARGO_HOME`） |
+| Visual Studio 2022 + C++ 桌面开发 | 用 `vswhere` 找 `Microsoft.VisualStudio.Component.VC.Tools.x86.x64`；Community / Professional / Enterprise / Build Tools 均可 | ✅ 本机 Community |
+| Rust stable-msvc | `cargo --version`；脚本按 `CARGO_HOME` → 仓库上级 `toolchains/` → `%USERPROFILE%\.cargo` 查找 | ✅（脚本自动定位） |
 | Node 20+ / npm | `node --version` / `npm --version` | ✅ Node 24 / npm 11 |
 | WebView2 Runtime | `C:\Program Files (x86)\Microsoft\EdgeWebView\Application` | ✅ |
 | Python 引擎依赖 | `python -c "import sherpa_onnx, numpy"` | ✅ |
 | 本地模型 | `models/` 下有 `sensevoice/ speaker/ vad/` | ✅ |
 
-`desktop/build.cmd`、`run-dev.cmd`、`build-release.cmd` 已经帮你做了三件事：
-进 `vcvars64.bat`、把 Rust 指到工具链目录、把 `CARGO_BUILD_JOBS` 限成 2（防内存打爆）。
-**不要绕过脚本直接 `cargo build`**，否则容易用到 Git Bash 自带的 GNU `link.exe`。
+`desktop/build.cmd`、`run-dev.cmd`、`build-release.cmd` 会先调用 `env.cmd`：
+自动找 VS（`vswhere`，找不到再按常见版本目录兜底）、按 `CARGO_HOME` →
+仓库上级 `toolchains/` → rustup 默认目录的顺序找 Rust，并把 `CARGO_BUILD_JOBS`
+限成 2（防内存打爆）。**不要绕过脚本直接 `cargo build`**，否则容易用到 Git Bash
+自带的 GNU `link.exe`。
 
 ### 2.2 第一次运行
 
@@ -124,7 +126,7 @@ run-dev.cmd
 想换一个已经打好的引擎：
 
 ```bat
-set LIVENOTES_ENGINE_EXE=E:\path\to\engine.exe
+set LIVENOTES_ENGINE_EXE=C:\path\to\engine.exe
 run-dev.cmd
 ```
 

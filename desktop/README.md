@@ -38,28 +38,31 @@ desktop/
     css/desktop.css      # 应用内右键菜单 / 全库搜索 / 轻提示
     js/desktop.js        # 上述交互 + data-ln-copy 文案覆盖
   build.cmd              # 进入 MSVC 环境后跑 cargo
+  build-release.cmd      # 进入 MSVC 环境后打包安装包
+  env.cmd                # 工具链探测：VS / Rust / cargo
   run-dev.cmd            # 进入 MSVC 环境后跑 tauri dev
   run-dev.ps1            # 开发态包装：退出时收掉 tauri dev 整棵进程树
 ```
 
 ## 工具链
 
-- Visual Studio 2022 Community，工作负载 **使用 C++ 的桌面开发**
-  （`Microsoft.VisualStudio.Workload.NativeDesktop`，包含 MSVC v143 + Windows 11 SDK）；
+- Visual Studio 2022（Community / Professional / Enterprise / Build Tools 均可），
+  工作负载 **使用 C++ 的桌面开发**（`Microsoft.VisualStudio.Workload.NativeDesktop`，
+  包含 MSVC v143 + Windows 11 SDK）；
 - Rust stable-msvc（`rustup default stable-msvc`）；
 - Node 20+ / npm；
 - WebView2 Runtime（Windows 10/11 一般自带）。
 
-Rust 装在仓库上级的 toolchains 目录（脚本会自动定位；也可用 %USERPROFILE%）：
+`build.cmd` / `run-dev.cmd` / `build-release.cmd` 会通过 `env.cmd` 自动找工具链：
 
-```bat
-set RUSTUP_HOME=%USERPROFILE%\toolchains\rustup
-set CARGO_HOME=%USERPROFILE%\toolchains\cargo
-set PATH=%CARGO_HOME%\bin;%PATH%
-```
+- VS 用 `vswhere` 定位任意 2022 版本；没有 `vswhere` 时再按 Community /
+  Professional / Enterprise / Build Tools 的常见目录兜底；
+- Rust 优先用已设置的 `CARGO_HOME` / `RUSTUP_HOME`，其次用仓库上级的
+  `toolchains/`，最后回落到 rustup 默认的 `%USERPROFILE%\.cargo` / `.rustup`；
+- 进入 MSVC 环境并检查 `cargo`，缺什么会直接告诉你装什么。
 
-`build.cmd` / `run-dev.cmd` 已经处理了这两件事，并会先调用 `vcvars64.bat`，
-确保 `link.exe` 是 MSVC 的而不是 Git Bash 自带的 GNU `link`。
+不需要手动设 `CARGO_HOME`。如果你已经有自己的工具链目录，先在当前 cmd 里设好
+`CARGO_HOME` / `RUSTUP_HOME` 再运行脚本即可。
 
 ## 开发
 

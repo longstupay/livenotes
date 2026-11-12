@@ -240,7 +240,8 @@ data/               数据库、录音、日志（不提交）
 
 | 变量 | 默认 | 说明 |
 |---|---|---|
-| `LIVENOTES_HOST` / `LIVENOTES_PORT` | `127.0.0.1` / `8765` | 监听地址与端口 |
+| `LIVENOTES_HOST` / `LIVENOTES_PORT` | `127.0.0.1` / `8765` | 监听地址与端口；手机要访问回听页时用 `python run.py --lan`（绑 `0.0.0.0`） |
+| `LIVENOTES_BASE_URL` | 自动 | 飞书卡片里给手机用的地址前缀。默认：`HOST` 非回环时用 `HOST`，否则取本机局域网 IP；多网卡选错（VPN / WSL / Hyper-V）时显式设成 `http://<局域网IP>:8765` |
 | `LIVENOTES_MODELS_DIR` | `./models` | 模型目录 |
 | `LIVENOTES_DATA_DIR` | `./data` | 数据库/录音目录（压测可指向临时目录） |
 | `LIVENOTES_MAX_SPEAKERS` | `8` | 实时阶段声纹聚类上限 |
