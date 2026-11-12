@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>采集端</title>
+<style>
+:root{--ink:#e9eef7;--muted:#8b97ab;--line:#1e2836;--bg:#0d131c;--ok:#2bb673;--bad:#e0432f;--warn:#c9a227}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+  font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+.wrap{max-width:680px;margin:0 auto;padding:40px 28px}
+h1{font-size:20px;margin:0 0 6px;letter-spacing:.2px}
+.room{color:var(--muted);font-size:13px;margin-bottom:26px}
+.badge{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;
+  padding:8px 16px;border-radius:999px;background:#141d29;border:1px solid var(--line);margin-bottom:26px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--warn)}
+.dot.on{background:var(--ok);box-shadow:0 0 0 4px rgba(43,182,115,.15)}
+.dot.off{background:var(--bad);box-shadow:0 0 0 4px rgba(224,67,47,.15)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px}
+.cell{background:#121a25;border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.cell .k{font-size:11.5px;color:var(--muted);margin-bottom:4px}
+.cell .v{font-size:19px;font-variant-numeric:tabular-nums}
+.err{background:#2a1512;border:1px solid #4a231e;color:#ffb4a8;border-radius:12px;
+  padding:12px 16px;font-size:12.5px;line-height:1.8;display:none}
+.err.show{display:block}
+.hint{margin-top:26px;font-size:11.5px;color:var(--muted);line-height:2}
+.mono{font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>采集端</h1>
+  <div class="room" id="room">—</div>
+  <div class="badge"><span class="dot" id="dot"></span><span id="state">准备中…</span></div>
+  <div class="grid">
+    <div class="cell"><div class="k">已送音频</div><div class="v mono" id="dur">0:00</div></div>
+    <div class="cell"><div class="k">音频块</div><div class="v mono" id="chunks">0</div></div>
+    <div class="cell"><div class="k">采样率</div><div class="v mono" id="sr">—</div></div>
+    <div class="cell"><div class="k">丢块</div><div class="v mono" id="drop">0</div></div>
+  </div>
+  <div class="err" id="err"></div>
+  <div class="hint">
+    这个页面由本地服务托管，会自动抓取本浏览器里<b>指定标题</b>的那个标签页的声音，
+    不经过扬声器，也不需要任何点击。<br>
+    关掉它 = 停止这一路采集。
+  </div>
+</div>
+<audio id="mon" muted></audio>
+<script>
+var S = { sid:'', chunks:0, dropped:0, secs:0, running:false, err:'', liveReported:false, liveReporting:false, ready:false, stopped:false, stream:null, ctx:null, lastChunkAt:0, stallReported:false };
+var qs = new URLSearchParams(location.search);
+var title = qs.get('title') || '未命名房间';
+var roomId = qs.get('room') || '';
+var resumeSid = qs.get('session') || '';
+document.getElementById('room').textContent = '直播间：' + title;
+document.title = '采集端 · ' + title;
+
+function $(s){return document.querySelector(s)}
+function ts(x){x=Math.max(0,Math.round(x||0));return Math.floor(x/60)+':'+String(x%60).padStart(2,'0')}
+function setState(text, cls){
+  $('#state').textContent = text;
+  $('#dot').className = 'dot' + (cls ? ' ' + cls : '');
+}
+async function reportRoom(state, stage, note, extra){
+  if (!roomId) return;
+  var body = Object.assign({ id: roomId, source:'page', state: state, stage: stage, stage_note: note || '' }, extra || {});
+  try {
+    const res = await fetch('/api/rooms/state', { method:'POST',
+      headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    return res.ok;
+  } catch (e) { return false; }
+}
+// 房间现在的状态。"" = 网络抖动（不据此停），"__missing__" = 房间被删了。
+async function roomState(){
+  if (!roomId) return "";
+  try {
+    const r = await fetch('/api/rooms', {cache:'no-store'});
+    if (!r.ok) return "";
+    const j = await r.json();
+    const room = (j.rooms || []).find(x => x.id === roomId);
+    return room ? String(room.state || "") : "__missing__";
+  } catch (e) { return ""; }
+}
+// 停止这一路：会话被服务端停了、房间被删了，采集页必须自己收手。
+// 旧版本收到 404 就重建会话，结果点了停止还在录、还把房间重新点成 live。
+function stopSelf(reason){
+  if (S.stopped) return;
+  S.stopped = true;
+  S.running = false;
+  S.ready = false;
+  S.sid = '';
+  try { if (S.stream) S.stream.getTracks().forEach(t => t.stop()); } catch (e) {}
+  try { if (S.ctx) S.ctx.close(); } catch (e) {}
+  setState('已停止' + (reason ? ' · ' + reason : ''), 'off');
+  setTimeout(function(){ try { window.close(); } catch (e) {} }, 800);
+}
+function fail(msg, stage){
+  if (S.stopped) return;
+  S.err = msg;
+  $('#err').textContent = msg;
+  $('#err').classList.add('show');
+  setState('未在采集', 'off');
+  if (roomId) {
+    fetch('/api/rooms/state', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ id: roomId, source:'page', state: 'failed', stage: stage || 1,
+        failed_stage: stage || 1, error: String(msg).slice(0,160) }) }).catch(()=>{});
+  }
+}
+function tick(){
+  $('#dur').textContent = ts(S.secs);
+  $('#chunks').textContent = S.chunks;
+  $('#drop').textContent = S.dropped;
+}
+
+var WORKLET = "class PCM16 extends AudioWorkletProcessor{" +
+  "constructor(){super();this.buf=new Int16Array(4096);this.n=0;}" +
+  "process(inputs){const ch=inputs[0]&&inputs[0][0];if(!ch)return true;" +
+  "for(let i=0;i<ch.length;i++){const s=Math.max(-1,Math.min(1,ch[i]));" +
+  "this.buf[this.n++]=s<0?s*0x8000:s*0x7fff;" +
+  "if(this.n>=this.buf.length){this.port.postMessage({pcm:this.buf.buffer});" +
+  "this.buf=new Int16Array(4096);this.n=0;}}return true;}};" +
+  "registerProcessor('pcm16',PCM16);";
+
+// 房间名优先从服务端查：URL 参数会被 CDP 的 /json/new 吃掉，不能依赖它
+async function resolveTitle(){
+  if (title && title !== '未命名房间') return title;
+  if (!roomId) return title;
+  try {
+    const r = await fetch('/api/rooms');
+    const j = await r.json();
+    const room = (j.rooms || []).find(x => x.id === roomId);
+    if (room && room.name) return room.name;
+  } catch (e) {}
+  return title;
+}
+
+async function newSession(){
+  const r = await fetch('/api/live/start', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ title: '监听中心 · ' + title })
+  });
+  if (!r.ok) throw new Error('建会话失败 HTTP ' + r.status);
+  const j = await r.json();
+  if (!j.session_id) throw new Error('建会话没返回 id');
+  return j.session_id;
+}
+
+async function start(){
+  var stream = null;
+  try {
+    title = await resolveTitle();
+    document.getElementById('room').textContent = '直播间：' + title;
+    document.title = '采集端 · ' + title;
+
+    // 顺序按收听页的六步来：先真的拿到音频，再建会话，最后才开始入库。
+    // 原来先建会话再取流，取流失败会留下一个空场次；阶段也没法如实上报。
+    setState('正在取音频…');
+    await reportRoom('starting', 3, '正在取音频');
+    stream = await navigator.mediaDevices.getDisplayMedia({
+      video: true,
+      audio: { echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1 }
+    });
+    S.stream = stream;
+    if (!stream.getAudioTracks().length) {
+      stream.getTracks().forEach(t => t.stop());
+      throw new Error('没有拿到音频：这个标签页可能没在播放声音');
+    }
+
+    const ctx = new AudioContext({ sampleRate: 16000 });
+    S.ctx = ctx;
+    $('#sr').textContent = ctx.sampleRate + 'Hz';
+    if (Math.abs(ctx.sampleRate - 16000) > 1) throw new Error('浏览器没按 16k 采样：' + ctx.sampleRate);
+
+    await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET], {type:'application/javascript'})));
+    const src = ctx.createMediaStreamSource(stream);
+    const node = new AudioWorkletNode(ctx, 'pcm16', { numberOfInputs:1, numberOfOutputs:1, outputChannelCount:[1] });
+    const gain = ctx.createGain(); gain.gain.value = 0;
+    src.connect(node); node.connect(gain); gain.connect(ctx.destination);
+
+    node.port.onmessage = (e) => send(e.data.pcm);
+    stream.getAudioTracks()[0].onended = () => {
+      // 运行中音频轨结束，多半是页面刷新/跳转/被冻结；先按断流上报，
+      // 让代理用同一个 session 重建采集页。真下播由代理的页面探针判定。
+      if (S.running) markCaptureStalled('标签页音频流结束');
+      else fail('标签页音频结束（下播 / 刷新 / 关页）', 5);
+    };
+
+    // 建会话之前再看一眼：如果用户在这几十秒里已经点了停止/删除了房间，
+    // 就不要建会话（否则会留下一个没人认领、还在录的场次）。
+    var st0 = await roomState();
+    if (st0 === "__missing__" || st0 === "stopped") { stopSelf('房间已停止'); return; }
+
+    setState('正在建立会话…');
+    // 断流重建时 URL 会带 session=…：服务端还在跑就续接同一场，别把缺口拆成两场。
+    // 先续接再报阶段 4：阶段 4 不带 session_id 时服务端会清掉房间上的旧会话，
+    // 先续接就能把这个 id 一起带过去，避免中间出现「房间没有会话」的空窗。
+    if (resumeSid) {
+      try {
+        var rr = await fetch('/api/live/status?id=' + encodeURIComponent(resumeSid), {cache:'no-store'});
+        if (rr.ok) {
+          var sj = await rr.json();
+          if (sj && sj.running) {
+            S.sid = resumeSid;
+            setState('采集中 · 续接会话', 'on');
+          }
+        }
+      } catch (e) {}
+    }
+    await reportRoom('starting', 4,
+      S.sid ? '音频已拿到，续接原会话' : '音频已拿到，正在建立会话',
+      S.sid ? { session_id: S.sid } : null);
+    if (!S.sid) S.sid = await newSession();
+    S.liveReported = false;
+    S.liveReporting = false;
+
+    // 阶段 5 的请求落库之后才放音频块过去，避免「live 6」被迟到的
+    // 「starting 5」倒灌回去（两个请求在服务端是并发处理的）。
+    await reportRoom('starting', 5, '会话已建立，正在开始入库', { session_id: S.sid });
+    S.ready = true;
+    setState('采集中 · 等待首块', 'on');
+    S.running = true;
+    S.lastChunkAt = Date.now();
+    S.stallReported = false;
+  } catch (e) {
+    if (stream) { try { stream.getTracks().forEach(t => t.stop()); } catch (x) {} }
+    var msg = e.name === 'NotAllowedError'
+      ? '被拒绝：' + e.message + '（若弹了选源框，说明自动选源开关没生效）'
+      : (e.message || String(e));
+    var stage = /建会话|session/i.test(msg) ? 4 : 3;
+    fail(msg, stage);
+  }
+}
+
+var inflight = 0;
+async function send(pcm){
+  // 不管这块最终有没有送出去，先记下「音频还在产出」：看门狗看的是采集链路，
+  // 不是网络。发送失败有单独的 fail() 路径。
+  S.lastChunkAt = Date.now();
+  if (!S.sid) return;
+  if (!S.ready) { S.dropped++; tick(); return; }
+  if (inflight >= 8) { S.dropped++; tick(); return; }
+  inflight++;
+  const sentSid = S.sid;   // 这次请求真正用的会话 id；迟到的响应不能影响新一代会话
+  S.chunks++; S.secs += 4096/16000; tick();
+  try {
+    const r = await fetch('/api/live/chunk', {
+      method:'POST',
+      headers:{'Content-Type':'application/octet-stream','X-Live-Id':sentSid},
+      body: pcm
+    });
+    if (r.status === 404) {
+      if (S.rebuilding || sentSid !== S.sid || S.stopped) return;
+      // 会话 404 有两种可能：服务重启（该重建）和用户主动停止/删房（该收手）。
+      // 不区分就会"点了停止还在录"，所以重建前先看房间状态。
+      var st = await roomState();
+      if (st === "__missing__" || st === "stopped") { stopSelf('房间已停止'); return; }
+      S.rebuilding = true;
+      S.ready = false;
+      S.sid = '';
+      S.liveReported = false;
+      S.liveReporting = false;
+      setState('会话失效，正在重建…', 'warn');
+      try {
+        await reportRoom('starting', 4, '会话失效，正在重建');
+        S.sid = await newSession();
+        await reportRoom('starting', 5, '会话已重建，正在恢复入库', { session_id: S.sid });
+      } catch (e2) {
+        fail('会话重建失败：' + e2.message, 4);
+        return;
+      } finally {
+        S.rebuilding = false;
+      }
+      S.ready = true;
+      setState('采集中 · 等待首块', 'on');
+    } else if (!r.ok) {
+      fail('送块失败 HTTP ' + r.status, 5);
+    } else if (!S.liveReported && !S.liveReporting && sentSid === S.sid && !S.stopped) {
+      // 第一块真的送到服务端，才把房间标成 live：这时「入库」有证据。
+      // 上报失败就先不置位，下一块继续试；否则一次抖动会让房间永远停在「启动中」。
+      S.liveReporting = true;
+      const ok = await reportRoom('live', 6, '音频块已开始入库', { session_id: S.sid });
+      S.liveReporting = false;
+      if (ok) {
+        S.liveReported = true;
+        setState('采集中 · 已入库', 'on');
+      }
+    }
+  } catch (e) {
+    S.dropped++; tick();
+    fail('连不上本地服务：' + e.message, 5);
+  } finally {
+    inflight--;
+  }
+}
+
+// 关页面时让服务端收尾（keepalive 保证请求能发出）。
+// 断流重建时代理会先置 __keepSessionOnUnload：这次关闭是换采集页，不能停会话。
+window.addEventListener('beforeunload', () => { if (S.sid && !S.stopped && !window.__keepSessionOnUnload) {
+  try {
+    fetch('/api/live/stop', { method:'POST', keepalive: true,
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ session_id: S.sid }) });
+  } catch (e) {}
+}});
+
+// 用户在收听页点「停止」/「删除」后，房间状态会变成 stopped 或被删掉。
+// 采集代理在 3 秒内会回收浏览器；如果代理没在跑，这一页必须自己停下来。
+setInterval(async function(){
+  if (S.stopped || !roomId || !S.sid) return;
+  var st = await roomState();
+  if (st === "__missing__" || st === "stopped") stopSelf('房间已停止');
+}, 5000);
+
+// 采集页自己的看门狗：AudioWorklet 不报错、音频轨也不一定触发 ended，
+// 只能靠「多久没产出一块」判断。6 秒是扩展 offscreen 那套的同一口径。
+var STALL_MS = 6000;
+function markCaptureStalled(reason) {
+  if (!S.running || S.stopped || S.stallReported) return;
+  S.stallReported = true;
+  var idle = S.lastChunkAt ? Date.now() - S.lastChunkAt : STALL_MS;
+  setState('采集异常：' + Math.round(idle / 1000) + ' 秒没有音频块', 'warn');
+  // 音频上下文被挂起时先自救；救不回来就交给代理重建采集页。
+  try { if (S.ctx && S.ctx.state === 'suspended') S.ctx.resume(); } catch (e) {}
+  if (roomId) {
+    fetch('/api/rooms/state', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ id: roomId, source:'page', state:'live', stage:6,
+        stage_note: '采集异常：' + Math.round(idle / 1000) + ' 秒没有音频块（不是没人说话）' })
+    }).catch(()=>{});
+  }
+}
+function markCaptureResumed() {
+  if (!S.stallReported) return;
+  S.stallReported = false;
+  setState('采集中 · 已入库', 'on');
+  if (roomId) {
+    fetch('/api/rooms/state', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ id: roomId, source:'page', state:'live', stage:6,
+        stage_note: '采集已恢复' })
+    }).catch(()=>{});
+  }
+}
+setInterval(function(){
+  if (!S.running || !S.sid || S.stopped) return;
+  var idle = Date.now() - (S.lastChunkAt || 0);
+  if (idle >= STALL_MS) markCaptureStalled('没有音频块');
+  else if (idle < 2000) markCaptureResumed();
+}, 2000);
+
+start();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>LiveNotes · 标注工作区（UI 预览）</title>
+<style>
+:root{
+  --bg:#080A0D; --panel:#0D1116; --panel-2:#11161D; --panel-3:#151B23;
+  --line:#1D252E; --line-2:#2A3440;
+  --ink:#E9E6DF; --muted:#8B97A4; --faint:#5E6A77;
+  --amber:#E6B566; --amber-soft:rgba(230,181,102,.12); --amber-line:rgba(230,181,102,.28);
+  --jade:#84D6B2; --jade-soft:rgba(132,214,178,.10);
+  --red:#E8776D; --red-soft:rgba(232,119,109,.10);
+  --blue:#8FB4D9; --blue-soft:rgba(143,180,217,.10);
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --mono:"Cascadia Mono",Consolas,ui-monospace,monospace;
+
+  --side-w:264px; --insp-w:322px; --sp-l:5px; --sp-r:5px;
+  --live-h:52%; --sp-h:5px;
+  --t:170ms;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
+  font:13px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+[hidden]{display:none!important}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#242D38;border-radius:8px}
+::-webkit-scrollbar-thumb:hover{background:#303B48}
+::-webkit-scrollbar-track{background:transparent}
+svg{display:block;flex:0 0 auto}
+kbd{font-family:var(--mono);font-size:9.5px;color:var(--faint);border:1px solid var(--line-2);
+  border-radius:4px;padding:1px 5px;background:#0B0F13}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+.app{height:100vh;display:grid;grid-template-rows:44px minmax(0,1fr) 26px}
+
+/* ───────────────────────────────── topbar */
+.topbar{display:flex;align-items:center;gap:12px;padding:0 0 0 14px;
+  background:#0A0D11;border-bottom:1px solid var(--line);position:relative;z-index:40}
+.brand{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.mark{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(145deg,#E9BE74,#C98F3B);color:#1A1306;font-weight:800;font-size:11px;
+  box-shadow:0 0 0 1px rgba(230,181,102,.25)}
+.wordmark{font-size:13px;font-weight:650;letter-spacing:.2px}
+.crumb{font-size:11.5px;color:var(--faint);display:flex;gap:6px;align-items:center;white-space:nowrap}
+.crumb b{font-weight:500;color:var(--muted)}
+.crumb i{font-style:normal;color:#3A4652}
+.cmdk{margin-left:auto;width:330px;height:28px;flex:0 1 330px;display:flex;align-items:center;gap:8px;
+  padding:0 9px;background:#0F1319;border:1px solid var(--line);border-radius:7px;color:var(--faint)}
+.cmdk span{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmdk kbd{margin-left:auto}
+
+.tools{display:flex;align-items:center;gap:2px;flex:0 0 auto;padding-right:4px}
+.tbtn{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  color:var(--faint);transition:background .12s,color .12s}
+.tbtn:hover{background:var(--panel-2);color:var(--muted)}
+.tbtn.on{background:#1A222B;color:var(--ink);box-shadow:inset 0 0 0 1px var(--line-2)}
+.tbtn.on:hover{background:#1E2731}
+.vsep{width:1px;height:16px;background:var(--line-2);margin:0 5px}
+.winbtns{display:flex;align-items:stretch;height:44px;border-left:1px solid var(--line);margin-left:2px}
+.wbtn{width:44px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.wbtn:hover{background:var(--panel-2);color:var(--ink)}
+.wbtn.close:hover{background:#E81123;color:#fff}
+
+/* ───────────────────────────────── body grid */
+.body{display:grid;min-height:0;
+  grid-template-columns:56px var(--side-w) var(--sp-l) minmax(0,1fr) var(--sp-r) var(--insp-w);
+  transition:grid-template-columns var(--t) ease}
+body.dragging .body{transition:none}
+
+.rail{background:#0A0D11;border-right:1px solid var(--line);display:flex;flex-direction:column;
+  align-items:center;padding:8px 0;gap:4px;min-width:0;overflow:hidden}
+.rail-btn{width:38px;height:38px;border-radius:8px;display:flex;flex-direction:column;gap:3px;
+  align-items:center;justify-content:center;color:var(--faint);position:relative}
+.rail-btn span{font-size:8px;line-height:1}
+.rail-btn:hover{background:var(--panel-2);color:var(--muted)}
+.rail-btn.on{background:var(--panel-3);color:var(--amber);box-shadow:inset 0 0 0 1px var(--line-2)}
+.rail .sp{flex:1}
+
+.pane{min-width:0;overflow:hidden;display:flex;flex-direction:column;background:var(--panel)}
+.side{border-right:1px solid var(--line)}
+.insp{border-left:1px solid var(--line)}
+
+/* pane header shared */
+.pane-head{height:34px;flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:0 6px 0 11px;
+  background:#0C1117;border-bottom:1px solid var(--line)}
+.ph-title{font-size:11.5px;font-weight:600;white-space:nowrap}
+.ph-meta{font-size:9.5px;color:var(--faint);font-family:var(--mono);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.ph-sp{flex:1;min-width:4px}
+.ph-btn{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;
+  color:var(--faint);flex:0 0 auto}
+.ph-btn:hover{background:var(--panel-3);color:var(--ink)}
+.ph-btn.close:hover{background:rgba(232,119,109,.16);color:var(--red)}
+.ph-btn.on{background:var(--amber-soft);color:var(--amber);box-shadow:inset 0 0 0 1px var(--amber-line)}
+
+/* splitters */
+.sp{background:transparent;position:relative;z-index:6}
+.sp::after{content:"";position:absolute;inset:0;transition:background .12s}
+.sp:hover::after,.sp.live::after{background:var(--amber-line)}
+.sp[data-axis="x"]{cursor:col-resize}
+.sp[data-axis="y"]{cursor:row-resize}
+.sp[data-axis="y"]::after{left:0;right:0}
+
+/* ───────────────────────────────── stage */
+.stage{display:grid;grid-template-rows:46px minmax(0,1fr);min-width:0;min-height:0;background:#070B0F}
+.stage-head{display:flex;align-items:center;gap:10px;padding:0 8px 0 14px;
+  border-bottom:1px solid var(--line);background:#0A0D11;min-width:0}
+.st-ch{font-family:var(--mono);font-size:10px;color:var(--amber);letter-spacing:.6px;
+  border:1px solid var(--amber-line);background:var(--amber-soft);border-radius:5px;padding:2px 6px}
+.st-name{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  min-width:0;max-width:38%}
+.st-meta{font-size:10px;color:var(--faint);font-family:var(--mono);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;min-width:0}
+.st-sp{flex:1}
+.seg{display:flex;align-items:center;background:#0B0F14;border:1px solid var(--line);border-radius:7px;
+  padding:2px;gap:1px;flex:0 0 auto}
+.seg button{height:21px;padding:0 9px;border-radius:5px;font-size:10.5px;color:var(--faint);white-space:nowrap}
+.seg button:hover{color:var(--muted)}
+.seg button.on{background:var(--panel-3);color:var(--ink);box-shadow:0 0 0 1px var(--line-2)}
+.seg .dot{width:4px;height:4px;border-radius:50%;background:var(--amber);display:inline-block;
+  margin-right:4px;vertical-align:1px}
+
+.ws{display:grid;grid-template-rows:var(--live-h) var(--sp-h) minmax(0,1fr);min-height:0;position:relative}
+.app[data-live="off"] .ws{grid-template-rows:0 0 minmax(0,1fr)}
+.app[data-tx="off"] .ws{grid-template-rows:minmax(0,1fr) 0 0}
+.app[data-live="off"] #livePane,.app[data-live="off"] .ws>.sp{visibility:hidden}
+.app[data-tx="off"] #txPane,.app[data-tx="off"] .ws>.sp{visibility:hidden}
+.ws-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:10px;color:var(--faint);font-size:11.5px;text-align:center}
+.ws-empty b{color:var(--muted);font-weight:600;font-size:13px}
+.ws-empty .btn{margin-top:2px}
+.btn{height:26px;padding:0 10px;border-radius:6px;border:1px solid var(--line-2);background:var(--panel-2);
+  color:var(--muted);font-size:11px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+  flex:0 0 auto}
+.btn:hover{border-color:#3A4756;color:var(--ink)}
+.btn.sm{height:22px;padding:0 8px;font-size:10px}
+.btn.amber{color:var(--amber);border-color:var(--amber-line);background:rgba(230,181,102,.07)}
+.btn.primary{background:linear-gradient(180deg,#E9BE74,#D6A455);color:#201505;border-color:#E9BE74;font-weight:600}
+
+/* 直播页 */
+.live-pane{position:relative;min-height:0;overflow:hidden;background:#05080B;display:flex;flex-direction:column}
+.live-view{position:relative;flex:1;min-height:0;overflow:hidden;background:
+  radial-gradient(120% 90% at 50% 0%,#0E1724 0%,#070B10 60%)}
+.live-view.fit-width .page{transform-origin:50% 50%}
+.page{position:absolute;left:50%;top:50%;width:1280px;height:720px;border-radius:4px;overflow:hidden;
+  transform:translate(-50%,-50%) scale(var(--k,.5));
+  background:radial-gradient(120% 110% at 30% 0%,#1B1466 0%,#0C0A2E 45%,#05040F 100%);
+  box-shadow:0 0 0 1px rgba(255,255,255,.06)}
+.pg-top{position:absolute;left:0;right:0;top:0;height:64px;display:flex;align-items:center;gap:12px;
+  padding:0 22px;background:linear-gradient(180deg,rgba(0,0,0,.45),rgba(0,0,0,0))}
+.pg-back{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.10);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:16px}
+.pg-ava{width:38px;height:38px;border-radius:50%;background:linear-gradient(145deg,#2E6BE6,#7FB3FF);
+  display:flex;align-items:center;justify-content:center;font-size:14px;color:#04122B;font-weight:800}
+.pg-name{color:#fff;font-size:15px;font-weight:600}
+.pg-sub{color:rgba(255,255,255,.6);font-size:11px}
+.pg-follow{height:26px;padding:0 14px;border-radius:13px;background:#FE2C55;color:#fff;font-size:12px}
+.pg-stats{margin-left:auto;display:flex;gap:22px;color:#fff}
+.pg-stat b{display:block;font-size:16px;font-weight:700;line-height:1.2}
+.pg-stat span{font-size:10px;color:rgba(255,255,255,.55)}
+.pg-grid{position:absolute;left:0;right:0;top:96px;bottom:110px;display:grid;
+  grid-template-columns:repeat(5,1fr);gap:26px 20px;padding:0 60px;align-content:center}
+.pg-host{display:flex;flex-direction:column;align-items:center;gap:8px}
+.pg-host .c{width:96px;height:96px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:26px;color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.16);
+  background:radial-gradient(circle at 35% 25%,#2A3350,#12172A)}
+.pg-host .n{font-size:12px;color:rgba(255,255,255,.78);white-space:nowrap}
+.pg-host.main .c{width:120px;height:120px;border-color:rgba(230,181,102,.5);
+  background:radial-gradient(circle at 35% 25%,#3B2B12,#1A1206)}
+.pg-gift{position:absolute;left:18px;right:18px;bottom:16px;height:64px;border-radius:12px;
+  background:rgba(10,12,22,.72);border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;
+  gap:14px;padding:0 16px}
+.pg-gift .g{display:flex;flex-direction:column;align-items:center;gap:2px;color:rgba(255,255,255,.7);font-size:9px}
+.pg-gift .g i{width:38px;height:38px;border-radius:9px;background:linear-gradient(145deg,#2A2136,#171225);
+  display:flex;align-items:center;justify-content:center;font-style:normal;font-size:17px}
+.pg-gift .sp{flex:1}
+.pg-gift .more{color:rgba(255,255,255,.65);font-size:11px}
+
+/* 画面两侧的留白带：完整显示时把空出来的横向空间用起来 */
+.live-side{position:absolute;top:0;bottom:0;width:var(--gutter,0px);display:flex;flex-direction:column;
+  justify-content:center;gap:9px;padding:0 18px;opacity:0;transition:opacity .18s;pointer-events:none;
+  overflow:hidden}
+.live-side.on{opacity:1;pointer-events:auto}
+.live-side.left{left:0;align-items:flex-end;text-align:right}
+.live-side.right{right:0;align-items:flex-start}
+.ls-kicker{font-family:var(--mono);font-size:8.5px;letter-spacing:.9px;color:var(--faint)}
+.ls-card{width:100%;background:rgba(13,17,22,.72);border:1px solid var(--line);border-radius:9px;
+  padding:10px;display:flex;flex-direction:column;gap:7px}
+.live-side.left .ls-card{align-items:flex-end}
+.ls-who{display:flex;align-items:center;gap:8px}
+.live-side.left .ls-who{flex-direction:row-reverse}
+.ls-ava{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 35% 25%,#3B2B12,#1A1206);border:1px solid var(--amber-line);
+  color:var(--amber);font-size:12px;font-weight:700;flex:0 0 auto}
+.ls-name{font-size:12px;font-weight:600;white-space:nowrap}
+.ls-sub{font-size:9px;color:var(--faint);font-family:var(--mono)}
+.ls-row{display:flex;align-items:center;gap:7px;width:100%;padding:6px 8px;border-radius:6px;
+  border:1px solid var(--line);background:#0F1319;text-align:left}
+.ls-row:hover{border-color:var(--line-2);background:#131922}
+.ls-row .n{font-size:10.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ls-row .m{margin-left:auto;font-family:var(--mono);font-size:8.5px;color:var(--faint);flex:0 0 auto}
+.ls-row .d{width:6px;height:6px;border-radius:50%;background:var(--blue);flex:0 0 auto}
+.ls-btn{height:22px;padding:0 9px;border-radius:5px;border:1px solid var(--line-2);background:var(--panel-2);
+  color:var(--muted);font-size:9.5px}
+.ls-btn.amber{color:var(--amber);border-color:var(--amber-line);background:rgba(230,181,102,.08)}
+.ls-acts{display:flex;gap:5px;width:100%;justify-content:flex-end}
+
+.live-bar{height:26px;flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:0 10px;
+  border-top:1px solid var(--line);background:#0A0E13;font-size:9px;color:var(--faint)}
+.live-bar .sp{flex:1}
+.fitchip{height:18px;padding:0 7px;border-radius:4px;border:1px solid transparent;color:var(--faint);font-size:9px}
+.fitchip:hover{color:var(--muted)}
+.fitchip.on{color:var(--amber);border-color:var(--amber-line);background:var(--amber-soft)}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--jade);box-shadow:0 0 6px rgba(132,214,178,.6)}
+
+/* 字幕 */
+.tx-pane{min-height:0;display:flex;flex-direction:column;background:#0A0E13}
+.tx-tools{display:flex;align-items:center;gap:2px;margin-left:4px}
+.tx-tab{height:19px;padding:0 7px;border-radius:4px;font-size:9.5px;color:var(--faint)}
+.tx-tab:hover{color:var(--muted)}
+.tx-tab.on{background:var(--panel-3);color:var(--ink)}
+.tx-count{font-family:var(--mono);font-size:9px;color:var(--amber)}
+.tx-scroll{flex:1;min-height:0;overflow-y:auto;padding:4px 10px 12px}
+.trow{display:grid;grid-template-columns:38px 92px minmax(0,1fr);gap:8px;padding:5px 6px;border-radius:5px;
+  font-size:12px;line-height:1.55;align-items:start;position:relative}
+.trow:hover{background:#0F141B}
+.trow.cur{background:rgba(230,181,102,.055);box-shadow:inset 2px 0 0 var(--amber)}
+.tt{font-family:var(--mono);font-size:9.5px;color:var(--faint);padding-top:3px;font-variant-numeric:tabular-nums}
+.tx{color:#BFC9D4;overflow-wrap:anywhere;min-width:0}
+.trow.cur .tx{color:#E7E1D5}
+.spk{display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:2px 7px;border-radius:4px;
+  font-size:10px;border:1px solid transparent;background:rgba(255,255,255,.03);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.spk:hover{border-color:var(--line-2);background:#141B23}
+.spk i{width:5px;height:5px;border-radius:50%;background:currentColor;flex:0 0 auto}
+.spk.host{color:#E8C47D;background:rgba(230,181,102,.09);border-color:rgba(230,181,102,.18)}
+.spk.known{color:#9CC8B0;background:rgba(132,214,178,.07);border-color:rgba(132,214,178,.16)}
+.spk.sus{color:#E6B566;background:rgba(230,181,102,.10);border-color:rgba(230,181,102,.30)}
+.spk.unknown{color:#E89088;background:rgba(232,119,109,.09);border-color:rgba(232,119,109,.24)}
+.tx-foot{height:24px;flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:0 12px;
+  border-top:1px solid var(--line);font-size:8.5px;color:var(--faint);background:#0A0E13}
+.tx-foot .sp{flex:1}
+
+/* 检查器 */
+.insp-head{padding:11px 13px 10px;border-bottom:1px solid var(--line)}
+.insp-kicker{font-family:var(--mono);font-size:9px;letter-spacing:.8px;color:var(--amber);margin-bottom:3px}
+.insp-name{font-size:12.5px;font-weight:600;line-height:1.35}
+.insp-sub{font-size:9.5px;color:var(--faint);margin-top:2px}
+.insp-body{flex:1;min-height:0;overflow-y:auto;padding:8px}
+.snd{padding:8px;border-radius:7px;border:1px solid transparent;margin-bottom:4px}
+.snd:hover{background:#11161D;border-color:var(--line)}
+.snd.todo{background:rgba(230,181,102,.05);border-color:rgba(230,181,102,.24)}
+.snd-top{display:flex;align-items:center;gap:6px;min-width:0}
+.snd-dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+.snd-name{font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.snd-tag{font-size:8px;border-radius:4px;padding:0 5px;border:1px solid var(--line-2);color:var(--faint);
+  white-space:nowrap;flex:0 0 auto}
+.snd-tag.ok{color:var(--jade);border-color:rgba(132,214,178,.25);background:var(--jade-soft)}
+.snd-tag.todo{color:var(--amber);border-color:var(--amber-line);background:rgba(230,181,102,.08)}
+.snd-meta{font-size:9px;color:var(--faint);margin:3px 0 0 13px;display:flex;gap:8px;
+  font-variant-numeric:tabular-nums}
+.snd-acts{display:flex;gap:4px;margin:6px 0 0 13px;flex-wrap:wrap}
+.snd-acts .btn{height:19px;padding:0 7px;font-size:9px;border-radius:4px}
+.insp-foot{flex:0 0 auto;border-top:1px solid var(--line);padding:9px 12px 11px;background:#0B0F14}
+.progress{height:5px;border-radius:3px;background:#1A222B;overflow:hidden;display:flex;margin-bottom:7px}
+.progress i{display:block;height:100%;background:var(--jade)}
+.progress b{display:block;height:100%;background:var(--amber)}
+.pstat{display:flex;align-items:baseline;gap:5px;font-size:9.5px;color:var(--muted)}
+.pstat b{font-size:15px;color:var(--ink);font-weight:650;font-variant-numeric:tabular-nums}
+.pstat span{color:var(--faint);font-size:8.5px}
+.phint{margin-top:4px;font-size:8.5px;color:var(--faint);line-height:1.55}
+
+/* 房间列表 */
+.side-head{height:42px;flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:0 8px 0 12px;
+  border-bottom:1px solid var(--line)}
+.side-head h2{margin:0;font-size:12px;font-weight:600}
+.side-head .count{font-size:10px;color:var(--faint)}
+.side-body{flex:1;min-height:0;overflow-y:auto;padding:8px}
+.room-row{width:100%;display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:8px;align-items:center;
+  padding:9px 8px;border-radius:8px;border:1px solid var(--line);background:#0F1319;text-align:left;
+  position:relative}
+.room-row.on{border-color:var(--amber-line);background:linear-gradient(180deg,rgba(230,181,102,.08),rgba(230,181,102,.02))}
+.room-ch{font-family:var(--mono);font-size:9px;color:var(--amber);border:1px solid var(--amber-line);
+  border-radius:4px;padding:2px 0;text-align:center}
+.room-name{display:block;font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.room-sub{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--faint);margin-top:2px}
+.room-time{font-family:var(--mono);font-size:9px;color:var(--faint)}
+.live-tag{font-size:8px;color:var(--jade);border:1px solid rgba(132,214,178,.25);border-radius:4px;padding:0 4px}
+.side-add{margin:8px;height:32px;border:1px dashed var(--line-2);border-radius:8px;color:var(--faint);
+  font-size:11px;display:flex;align-items:center;justify-content:center;gap:5px}
+.side-add:hover{border-color:var(--amber-line);color:var(--amber)}
+
+/* statusbar */
+.statusbar{display:flex;align-items:center;gap:14px;padding:0 12px;background:#0A0D11;
+  border-top:1px solid var(--line);font-size:9px;color:var(--faint)}
+.statusbar .sp{flex:1}
+.statusbar b{color:var(--muted);font-weight:500}
+.statusbar .ok{color:var(--jade)}
+@media (max-width:1420px){.statusbar .hint{display:none}}
+
+/* focus 模式 */
+.app[data-focus="side"] .stage,.app[data-focus="side"] .insp,
+.app[data-focus="side"] .sp{display:none!important}
+.app[data-focus="side"] .body{grid-template-columns:56px minmax(0,1fr)}
+.app[data-focus="insp"] .side,.app[data-focus="insp"] .stage,
+.app[data-focus="insp"] .sp{display:none!important}
+.app[data-focus="insp"] .body{grid-template-columns:56px minmax(0,1fr)}
+
+/* maximize */
+.ws[data-max="live"]{grid-template-rows:minmax(0,1fr) 0 0}
+.ws[data-max="tx"]{grid-template-rows:0 0 minmax(0,1fr)}
+.ws[data-max="live"] #txPane,.ws[data-max="tx"] #livePane{visibility:hidden}
+
+.toast{position:fixed;left:50%;bottom:44px;transform:translateX(-50%) translateY(6px);
+  background:#121820;border:1px solid #2E3A47;color:var(--ink);font-size:11px;padding:7px 13px;
+  border-radius:8px;box-shadow:0 14px 40px rgba(0,0,0,.5);opacity:0;pointer-events:none;
+  transition:opacity .16s,transform .16s;z-index:80}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="app" id="app" data-side="on" data-insp="on" data-live="on" data-tx="on" data-focus="">
+
+  <header class="topbar">
+    <div class="brand"><span class="mark">LN</span><span class="wordmark">LiveNotes</span></div>
+    <div class="crumb"><i>/</i><b>收听</b><i>/</i><b>标注工作区</b></div>
+    <div class="cmdk"><span>搜索房间、说话人、字幕…</span><kbd>Ctrl K</kbd></div>
+
+    <div class="tools">
+      <button class="tbtn on" data-toggle="side" title="房间列表  [">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3">
+          <rect x="2" y="2.5" width="12" height="11" rx="2"/><path d="M6.5 2.5v11"/>
+        </svg>
+      </button>
+      <button class="tbtn on" data-toggle="live" title="直播页面">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3">
+          <rect x="2" y="3.5" width="12" height="9" rx="2"/><path d="M6.6 6.4l3.4 1.9-3.4 1.9z" fill="currentColor" stroke="none"/>
+        </svg>
+      </button>
+      <button class="tbtn on" data-toggle="tx" title="实时字幕  \">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3">
+          <rect x="2" y="2.5" width="12" height="11" rx="2"/><path d="M4.6 6h6.8M4.6 8.6h6.8M4.6 11.2h4.2" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button class="tbtn on" data-toggle="insp" title="本场声音  ]">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3">
+          <rect x="2" y="2.5" width="12" height="11" rx="2"/><path d="M9.5 2.5v11"/>
+        </svg>
+      </button>
+      <span class="vsep"></span>
+      <button class="tbtn" id="btnReset" title="恢复默认布局">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3">
+          <path d="M3 8a5 5 0 1 1 1.6 3.7" stroke-linecap="round"/><path d="M3 3.6V8h4.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button class="tbtn" id="btnMore" title="更多">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <circle cx="3.5" cy="8" r="1.1"/><circle cx="8" cy="8" r="1.1"/><circle cx="12.5" cy="8" r="1.1"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="winbtns">
+      <button class="wbtn" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor"><path d="M2 6h8"/></svg></button>
+      <button class="wbtn" title="最大化"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor"><rect x="2.5" y="2.5" width="7" height="7"/></svg></button>
+      <button class="wbtn close" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor"><path d="M3 3l6 6M9 3l-6 6"/></svg></button>
+    </div>
+  </header>
+
+  <div class="body">
+    <nav class="rail">
+      <button class="rail-btn on" title="在听">
+        <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3">
+          <path d="M4 7v2a4 4 0 0 0 8 0V7" stroke-linecap="round"/>
+          <rect x="2.6" y="5.2" width="2.6" height="4.6" rx="1.3"/><rect x="10.8" y="5.2" width="2.6" height="4.6" rx="1.3"/>
+        </svg><span>收听</span>
+      </button>
+      <button class="rail-btn" title="工作台">
+        <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3">
+          <rect x="2.5" y="2.5" width="11" height="11" rx="2"/><path d="M2.5 6.4h11M6.4 6.4v7.1"/>
+        </svg><span>工作台</span>
+      </button>
+      <button class="rail-btn" title="文件">
+        <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3">
+          <path d="M3 4.2A1.7 1.7 0 0 1 4.7 2.5h2.1L8.4 4.3h2.9A1.7 1.7 0 0 1 13 6v5.8a1.7 1.7 0 0 1-1.7 1.7H4.7A1.7 1.7 0 0 1 3 11.8z"/>
+        </svg><span>文件</span>
+      </button>
+      <button class="rail-btn" title="人物">
+        <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3">
+          <circle cx="8" cy="5.6" r="2.6"/><path d="M3.2 13c.5-2.4 2.5-3.7 4.8-3.7s4.3 1.3 4.8 3.7" stroke-linecap="round"/>
+        </svg><span>人物</span>
+      </button>
+      <div class="sp"></div>
+      <button class="rail-btn" title="设置">
+        <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3">
+          <circle cx="8" cy="8" r="2.1"/><path d="M8 2.2v1.5M8 12.3v1.5M2.2 8h1.5M12.3 8h1.5M3.9 3.9l1.1 1.1M11 11l1.1 1.1M12.1 3.9L11 5M5 11l-1.1 1.1"/>
+        </svg>
+      </button>
+    </nav>
+
+    <aside class="pane side" id="sidePane">
+      <div class="pane-head">
+        <span class="ph-title">在听</span><span class="ph-meta">1</span><span class="ph-sp"></span>
+        <button class="ph-btn" title="添加"><svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.4"><path d="M6 2v8M2 6h8" stroke-linecap="round"/></svg></button>
+        <button class="ph-btn" data-focus="side" title="放大"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M7 2h3v3M5 10H2V7M10 2L6.6 5.4M2 10l3.4-3.4"/></svg></button>
+        <button class="ph-btn close" data-close="side" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.3"><path d="M3 3l6 6M9 3l-6 6"/></svg></button>
+      </div>
+      <div class="side-body">
+        <button class="room-row on">
+          <span class="room-ch">CH01</span>
+          <span>
+            <span class="room-name">企企AI落地派 · 企业AI赋能</span>
+            <span class="room-sub"><span class="live-tag">在听</span>07:55 · 新声音 2</span>
+          </span>
+          <span class="room-time">›</span>
+        </button>
+        <button class="side-add">＋ 添加直播间</button>
+      </div>
+    </aside>
+
+    <div class="sp" data-split="side" data-axis="x"></div>
+
+    <main class="stage">
+      <div class="stage-head">
+        <span class="st-ch">CH01</span>
+        <span class="st-name">企企AI落地派 · 企业AI赋能智能体</span>
+        <span class="st-meta" id="stageMeta">直播 · 07:55 · 3 个已认领 / 4 个待认领</span>
+        <span class="st-sp"></span>
+        <div class="seg">
+          <button>信号</button><button>页面</button><button class="on"><span class="dot"></span>标注</button>
+        </div>
+        <button class="btn sm">监控墙</button>
+        <button class="btn sm" style="color:var(--red);border-color:rgba(232,119,109,.3)">停止</button>
+      </div>
+
+      <div class="ws" id="ws">
+        <section class="live-pane" id="livePane">
+          <div class="pane-head">
+            <span class="ph-title">直播页面</span>
+            <span class="ph-meta">live.douyin.com · 原生视图</span>
+            <span class="ph-sp"></span>
+            <button class="ph-btn" data-act="more" title="更多">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="2.4" cy="6" r="1"/><circle cx="6" cy="6" r="1"/><circle cx="9.6" cy="6" r="1"/></svg>
+            </button>
+            <button class="ph-btn" data-max="live" title="放大 / 还原">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M7 2h3v3M5 10H2V7M10 2L6.6 5.4M2 10l3.4-3.4"/></svg>
+            </button>
+            <button class="ph-btn close" data-close="live" title="关闭">
+              <svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.3"><path d="M3 3l6 6M9 3l-6 6"/></svg>
+            </button>
+          </div>
+          <div class="live-view" id="liveView">
+            <div class="page" id="page">
+              <div class="pg-top">
+                <span class="pg-back">‹</span>
+                <span class="pg-ava">企</span>
+                <span><span class="pg-name">企企AI落地派</span><br><span class="pg-sub">9136 本场观看 · 直播中</span></span>
+                <span class="pg-follow">关注 6</span>
+                <span class="pg-stats">
+                  <span class="pg-stat"><b>100+</b><span>人气</span></span>
+                  <span class="pg-stat"><b>0/8</b><span>本场收益</span></span>
+                </span>
+              </div>
+              <div class="pg-grid">
+                <div class="pg-host main"><span class="c">企</span><span class="n">企企AI落地派</span></div>
+                <div class="pg-host"><span class="c">火</span><span class="n">火火在帝都</span></div>
+                <div class="pg-host"><span class="c">宏</span><span class="n">宏运锦鲲…</span></div>
+                <div class="pg-host"><span class="c">唠</span><span class="n">唠老大讲AI</span></div>
+                <div class="pg-host"><span class="c">一</span><span class="n">一苔一益</span></div>
+                <div class="pg-host"><span class="c">柯</span><span class="n">柯南AI·技术</span></div>
+                <div class="pg-host"><span class="c">孔</span><span class="n">孔松睿AI…</span></div>
+                <div class="pg-host"><span class="c">2</span><span class="n">2 Mythos…</span></div>
+                <div class="pg-host"><span class="c">易</span><span class="n">易流AI…</span></div>
+              </div>
+              <div class="pg-gift">
+                <span class="g"><i>🌹</i>为你披甲</span>
+                <span class="g"><i>🎁</i>七十二变</span>
+                <span class="g"><i>🧧</i>步步生莲</span>
+                <span class="g"><i>🚗</i>跑车</span>
+                <span class="g"><i>🏆</i>嘉年华</span>
+                <span class="sp"></span><span class="more">更多 ›</span>
+              </div>
+            </div>
+            <div class="live-side left" id="railL">
+              <div class="ls-kicker">当前说话人</div>
+              <div class="ls-card">
+                <div class="ls-who">
+                  <span class="ls-ava">桐</span>
+                  <span><span class="ls-name">阿桐</span><br><span class="ls-sub">主播 · 00:41 · 16 句</span></span>
+                </div>
+                <div class="ls-acts"><button class="ls-btn">改判</button><button class="ls-btn amber">确认主播</button></div>
+              </div>
+              <div class="ls-kicker">本场</div>
+              <div class="ls-card">
+                <div class="ls-sub">已认领 3 / 7 个声音</div>
+                <div class="ls-sub">按说话时长 85%</div>
+              </div>
+            </div>
+            <div class="live-side right" id="railR">
+              <div class="ls-kicker">待认领 4</div>
+              <button class="ls-row"><span class="d"></span><span class="n">嘉宾4</span><span class="m">11 句</span></button>
+              <button class="ls-row"><span class="d"></span><span class="n">嘉宾5</span><span class="m">1 句</span></button>
+              <button class="ls-row"><span class="d"></span><span class="n">嘉宾6</span><span class="m">1 句</span></button>
+              <button class="ls-row"><span class="d" style="background:var(--jade)"></span><span class="n">嘉宾2</span><span class="m">6 句</span></button>
+              <div class="ls-card" style="margin-top:2px">
+                <div class="ls-sub">点一条 → 在右侧本场声音里起名，或按 M 打点。</div>
+              </div>
+            </div>
+          </div>
+          <div class="live-bar">
+            <span class="live-dot"></span><span>画面已接入</span>
+            <span>·</span><span id="scaleTxt">缩放 58%</span>
+            <span class="sp"></span>
+            <button class="fitchip on" data-fit="contain">完整显示</button>
+            <button class="fitchip" data-fit="cover">铺满</button>
+          </div>
+        </section>
+
+        <div class="sp" data-split="h" data-axis="y"></div>
+
+        <section class="tx-pane" id="txPane">
+          <div class="pane-head">
+            <span class="ph-title">实时字幕</span><span class="tx-count">40</span>
+            <div class="tx-tools">
+              <button class="tx-tab on">全部</button>
+              <button class="tx-tab">待认领 4</button>
+            </div>
+            <span class="ph-sp"></span>
+            <button class="ph-btn" data-act="more" title="更多">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="2.4" cy="6" r="1"/><circle cx="6" cy="6" r="1"/><circle cx="9.6" cy="6" r="1"/></svg>
+            </button>
+            <button class="ph-btn" data-max="tx" title="放大 / 还原">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M7 2h3v3M5 10H2V7M10 2L6.6 5.4M2 10l3.4-3.4"/></svg>
+            </button>
+            <button class="ph-btn close" data-close="tx" title="关闭">
+              <svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.3"><path d="M3 3l6 6M9 3l-6 6"/></svg>
+            </button>
+          </div>
+          <div class="tx-scroll" id="txScroll"></div>
+          <div class="tx-foot">
+            <span>M 打点</span><span>Space 暂停</span>
+            <span class="sp"></span><span>最后一块 0.6s 前</span>
+          </div>
+        </section>
+
+        <div class="ws-empty" id="wsEmpty" hidden>
+          <b>面板都关掉了</b>
+          <span>从右上角的图标重新打开直播页面或实时字幕。</span>
+          <button class="btn amber" id="btnReopen">重新打开面板</button>
+        </div>
+      </div>
+    </main>
+
+    <div class="sp" data-split="insp" data-axis="x"></div>
+
+    <aside class="pane insp" id="inspPane">
+      <div class="pane-head">
+        <span class="ph-title">本场声音</span><span class="ph-meta">9</span>
+        <span class="ph-sp"></span>
+        <button class="ph-btn" data-act="more" title="更多">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="2.4" cy="6" r="1"/><circle cx="6" cy="6" r="1"/><circle cx="9.6" cy="6" r="1"/></svg>
+        </button>
+        <button class="ph-btn" data-focus="insp" title="放大">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M7 2h3v3M5 10H2V7M10 2L6.6 5.4M2 10l3.4-3.4"/></svg>
+        </button>
+        <button class="ph-btn close" data-close="insp" title="关闭">
+          <svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.3"><path d="M3 3l6 6M9 3l-6 6"/></svg>
+        </button>
+      </div>
+      <div class="insp-head">
+        <div class="insp-kicker">CH01</div>
+        <div class="insp-name">企企AI落地派 · 企业AI赋能智能体</div>
+        <div class="insp-sub">live.douyin.com · 20261111 234229</div>
+      </div>
+      <div class="insp-body" id="inspBody"></div>
+      <div class="insp-foot">
+        <div class="progress"><i style="width:78%"></i><b style="width:7%"></b></div>
+        <div class="pstat"><b>85%</b><span>按说话时长 · 已认领 3/7 个声音</span></div>
+        <div class="phint">漏掉的话语会归到「未识别」；<b>关窗后继续录音</b>。</div>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="statusbar">
+    <span>本地引擎 <b>127.0.0.1:52155</b></span><span>1 个直播间</span><span class="ok">1 路在听</span>
+    <span class="sp"></span>
+    <span class="hint">拖动分隔条调整大小 · 双击复位 · <kbd>[</kbd> <kbd>]</kbd> <kbd>\</kbd> 开关面板 · 面板右上角 ↗ 放大</span>
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const app = $('#app');
+  const ws = $('#ws');
+
+  const DEF = { side: 264, insp: 322, live: 0.52 };
+  const state = { side: DEF.side, insp: DEF.insp, live: DEF.live * 100, sideOn: true, inspOn: true,
+                  liveOn: true, txOn: true, focus: '', max: '', fit: 'contain' };
+
+  try {
+    const saved = JSON.parse(localStorage.getItem('ln-ws-preview') || 'null');
+    if (saved) Object.assign(state, saved);
+  } catch (e) {}
+
+  function persist() {
+    try { localStorage.setItem('ln-ws-preview', JSON.stringify(state)); } catch (e) {}
+  }
+
+  function apply(save = true) {
+    const b = document.body.style;
+    b.setProperty('--side-w', (state.sideOn ? state.side : 0) + 'px');
+    b.setProperty('--insp-w', (state.inspOn ? state.insp : 0) + 'px');
+    b.setProperty('--live-h', state.live + '%');
+    app.dataset.side = state.sideOn ? 'on' : 'off';
+    app.dataset.insp = state.inspOn ? 'on' : 'off';
+    app.dataset.live = state.liveOn ? 'on' : 'off';
+    app.dataset.tx = state.txOn ? 'on' : 'off';
+    app.dataset.focus = state.focus || '';
+    ws.dataset.max = state.max || '';
+    $('#sidePane').hidden = !state.sideOn;
+    $('#inspPane').hidden = !state.inspOn;
+    $$('.tbtn[data-toggle]').forEach(btn => {
+      const k = btn.dataset.toggle;
+      const on = k === 'side' ? state.sideOn : k === 'insp' ? state.inspOn
+               : k === 'live' ? state.liveOn : state.txOn;
+      btn.classList.toggle('on', on);
+    });
+    $('#wsEmpty').hidden = state.liveOn || state.txOn;
+    $$('.ph-btn[data-max]').forEach(b => b.classList.toggle('on', state.max === b.dataset.max));
+    $$('.ph-btn[data-focus]').forEach(b => b.classList.toggle('on', state.focus === b.dataset.focus));
+    measure();
+    if (save) persist();
+  }
+
+  function setPane(k, on) {
+    if (k === 'side') state.sideOn = on;
+    else if (k === 'insp') state.inspOn = on;
+    else if (k === 'live') { state.liveOn = on; if (on && state.liveOn && state.txOn) state.max = ''; }
+    else state.txOn = on;
+    if ((k === 'live' || k === 'tx') && on && state.max) state.max = '';
+    apply();
+  }
+
+  $$('.tbtn[data-toggle]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const k = btn.dataset.toggle;
+      const cur = k === 'side' ? state.sideOn : k === 'insp' ? state.inspOn
+                : k === 'live' ? state.liveOn : state.txOn;
+      setPane(k, !cur);
+    });
+  });
+
+  // 放大 / 还原 / 关闭
+  $$('.ph-btn[data-max]').forEach(b => b.addEventListener('click', () => {
+    const k = b.dataset.max;
+    state.max = state.max === k ? '' : k;
+    if (state.max === 'live') { state.liveOn = true; state.txOn = true; }
+    if (state.max === 'tx') { state.liveOn = true; state.txOn = true; }
+    apply();
+  }));
+  $$('.ph-btn[data-close]').forEach(b => b.addEventListener('click', () => {
+    const k = b.dataset.close;
+    if (k === 'insp') { state.inspOn = false; }
+    else setPane(k, false);
+    apply();
+  }));
+  $$('.ph-btn[data-focus]').forEach(b => b.addEventListener('click', () => {
+    state.focus = state.focus === b.dataset.focus ? '' : b.dataset.focus;
+    apply();
+  }));
+  $$('.ph-btn[data-act="more"]').forEach(b => b.addEventListener('click', () => {
+    toast('面板菜单：适应 / 字号 / 复制 — 预览里只做了布局部分');
+  }));
+
+  $('#btnReset').addEventListener('click', () => {
+    state.side = DEF.side; state.insp = DEF.insp; state.live = DEF.live * 100;
+    state.sideOn = state.inspOn = state.liveOn = state.txOn = true;
+    state.focus = ''; state.max = '';
+    apply(); toast('已恢复默认布局');
+  });
+  $('#btnMore').addEventListener('click', () => toast('更多：导出、快捷键、设置'));
+  $('#btnReopen').addEventListener('click', () => {
+    state.liveOn = true; state.txOn = true; apply();
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.target.matches('input,textarea')) return;
+    if (e.key === 'Escape') {
+      if (state.focus) state.focus = '';
+      else if (state.max) state.max = '';
+      else return;
+      apply();
+    }
+    if (e.key === '[') { state.sideOn = !state.sideOn; apply(); }
+    if (e.key === ']') { state.inspOn = !state.inspOn; apply(); }
+    if (e.key === '\\') { state.txOn = !state.txOn; apply(); }
+  });
+
+  // ── splitter 拖拽
+  const MIN = { side: 190, insp: 250, live: 22 };
+  function onDrag(sp, e) {
+    e.preventDefault();
+    const axis = sp.dataset.axis;
+    const kind = sp.dataset.split;
+    sp.classList.add('live');
+    document.body.classList.add('dragging');
+    const startX = e.clientX, startY = e.clientY;
+    const start = { side: state.side, insp: state.insp, live: state.live };
+    const stageW = $('.stage').getBoundingClientRect().width;
+    const stageH = $('.ws').getBoundingClientRect().height;
+    const move = ev => {
+      if (kind === 'side') {
+        state.side = Math.max(MIN.side, Math.min(460, start.side + ev.clientX - startX));
+        document.body.style.setProperty('--side-w', state.side + 'px');
+      } else if (kind === 'insp') {
+        state.insp = Math.max(MIN.insp, Math.min(520, start.insp - (ev.clientX - startX)));
+        document.body.style.setProperty('--insp-w', state.insp + 'px');
+      } else {
+        const h = Math.max(140, Math.min(stageH - 160, start.live / 100 * stageH + ev.clientY - startY));
+        state.live = h / stageH * 100;
+        document.body.style.setProperty('--live-h', state.live + '%');
+      }
+    };
+    const up = () => {
+      sp.classList.remove('live');
+      document.body.classList.remove('dragging');
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      persist();
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  }
+  $$('.sp').forEach(sp => {
+    sp.addEventListener('pointerdown', e => onDrag(sp, e));
+    sp.addEventListener('dblclick', () => {
+      const k = sp.dataset.split;
+      if (k === 'side') state.side = DEF.side;
+      else if (k === 'insp') state.insp = DEF.insp;
+      else state.live = DEF.live * 100;
+      apply();
+    });
+  });
+
+  // ── 直播页缩放（模拟原生视图按容器缩放）
+  const liveView = $('#liveView');
+  const page = $('#page');
+  let fit = 'contain';
+  function measure() {
+    const r = liveView.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const k = fit === 'cover' ? Math.max(r.width / 1280, r.height / 720)
+                              : Math.min(r.width / 1280, r.height / 720);
+    page.style.setProperty('--k', k.toFixed(4));
+    const gutter = Math.max(0, (r.width - 1280 * k) / 2);
+    liveView.style.setProperty('--gutter', Math.round(gutter) + 'px');
+    const show = gutter >= 176 && fit === 'contain';
+    $('#railL').classList.toggle('on', show);
+    $('#railR').classList.toggle('on', show);
+    $('#scaleTxt').textContent = '1280×720 · ' + (fit === 'cover' ? '铺满' : '完整显示') +
+      ' ' + Math.round(k * 100) + '%';
+  }
+  $$('.fitchip').forEach(b => b.addEventListener('click', () => {
+    fit = b.dataset.fit;
+    $$('.fitchip').forEach(x => x.classList.toggle('on', x === b));
+    measure();
+  }));
+  if (window.ResizeObserver) {
+    new ResizeObserver(() => measure()).observe(liveView);
+    new ResizeObserver(() => measure()).observe(ws);
+  }
+  window.addEventListener('resize', measure);
+
+  // ── 数据渲染
+  const rows = [
+    ['05:17', 'host', '阿桐', '就是你退入的所有东西，他需要模型的质量治理去换。'],
+    ['05:51', 'host', '阿桐', '操作去换结果，去给你AI做返回结果。'],
+    ['05:55', 'host', '阿桐', '刷场景会跟着所有的返回结果，再再次给到模型，这个东西。'],
+    ['05:59', 'host', '阿桐', '是死的那方跑不掉的，你是绕不开的，你现在离这一个问题。'],
+    ['06:03', 'host', '阿桐', '村内的数据怎么怎么走到村外的服务器去，还被村内。'],
+    ['06:07', 'host', '阿桐', '认可的。'],
+    ['06:08', 'sus', '嘉宾4', '现在就是这个问题。'],
+    ['06:10', 'known', '唠老大讲AI', '他说的这个技术我不太懂，你说是你跟着他谈。'],
+    ['06:14', 'unknown', '嘉宾5', '讲清楚干嘛？你说的一个干一个做不交付，在技术那里。'],
+    ['06:18', 'unknown', '嘉宾4', '就是事交付，他也不是产品的那块那个交付。你说。'],
+    ['06:22', 'host', '阿桐', '他说他能产品也不等于就是我跟你等于都干技术的兄弟。你。'],
+    ['06:26', 'known', '唠老大讲AI', '这个基础概念好像没有做对。'],
+    ['06:29', 'sus', '嘉宾4', '他这个我不知道，但在我现在没产品经理都没有。'],
+    ['06:33', 'host', '阿桐', '我现在我现是我介绍一下。'],
+    ['06:37', 'host', '阿桐', '这个团队这一块的话，我是一直要投资。'],
+    ['06:42', 'known', '唠老大讲AI', '这个整体的一产品经理的一个设计，就。'],
+    ['06:46', 'host', '阿桐', '然后这个目标真不用在这去扯这个问题，就是什么呢？瞎报会。'],
+    ['06:50', 'host', '阿桐', '加了好友之后，然后我我要东西去给你这个发。'],
+    ['06:54', 'host', '阿桐', '就是这个这个发给你，然后这个你如果有问题的话，如果。'],
+    ['06:58', 'host', '阿桐', '你能给我来对应的，比如做好的话或者发现我们的一些Bug这。'],
+    ['07:02', 'host', '阿桐', '这块了，我肯定有给你去解决这个活就是。'],
+  ];
+  const spkClass = { host: 'host', known: 'known', sus: 'sus', unknown: 'unknown' };
+  $('#txScroll').innerHTML = rows.map(([t, k, n, s], i) => {
+    const cur = i === rows.length - 1 ? ' cur' : '';
+    return `<div class="trow${cur}"><span class="tt">${t}</span>
+      <span><span class="spk ${spkClass[k]}"><i></i>${n}</span></span>
+      <span class="tx">${s}</span></div>`;
+  }).join('');
+
+  const speakers = [
+    { n: '阿桐', k: 'host', tag: '主播', meta: '00:41 · 16 句', on: true },
+    { n: '唠老大讲AI', k: 'known', tag: '已认领', meta: '02:11 · 37 句', on: true },
+    { n: '嘉宾4', k: 'sus', tag: '待确认', meta: '00:44 · 11 句', todo: true },
+    { n: '嘉宾5', k: 'sus', tag: '待确认', meta: '00:04 · 1 句', todo: true },
+    { n: '嘉宾6', k: 'sus', tag: '待确认', meta: '00:04 · 1 句', todo: true },
+    { n: '嘉宾2', k: 'known', tag: '已认领', meta: '00:33 · 6 句', on: true },
+    { n: 'Aria', k: 'known', tag: '已认领', meta: '00:52 · 9 句', on: true },
+    { n: '嘉宾7', k: 'sus', tag: '待确认', meta: '00:03 · 1 句', todo: true },
+    { n: '嘉宾8', k: 'unknown', tag: '未识别', meta: '00:12 · 2 句', todo: true },
+  ];
+  const dot = { host: 'var(--amber)', known: 'var(--jade)', sus: 'var(--blue)', unknown: 'var(--red)' };
+  $('#inspBody').innerHTML = speakers.map(s => `
+    <div class="snd${s.todo ? ' todo' : ''}">
+      <div class="snd-top">
+        <span class="snd-dot" style="background:${dot[s.k] || 'var(--faint)'}"></span>
+        <span class="snd-name">${s.n}</span>
+        <span class="snd-tag ${s.todo ? 'todo' : 'ok'}">${s.tag}</span>
+      </div>
+      <div class="snd-meta"><span>${s.meta}</span></div>
+      ${s.todo ? `<div class="snd-acts">
+        <button class="btn amber">起名</button>
+        <button class="btn">只标角色</button>
+        <button class="btn">跳过</button></div>` : ''}
+    </div>`).join('');
+
+  // ── toast
+  let tId = 0;
+  function toast(msg) {
+    const el = $('#toast');
+    el.textContent = msg;
+    el.classList.add('on');
+    clearTimeout(tId);
+    tId = setTimeout(() => el.classList.remove('on'), 1900);
+  }
+
+  // 预览调试：地址栏 #max=live / #off=insp,tx / #focus=side 直接进入对应状态
+  const hash = decodeURIComponent(location.hash.slice(1));
+  if (hash) {
+    hash.split('&').forEach(kv => {
+      const [k, v] = kv.split('=');
+      if (k === 'max') state.max = v || '';
+      if (k === 'focus') state.focus = v || '';
+      if (k === 'fit') fit = v || 'contain';
+      if (k === 'off') (v || '').split(',').forEach(x => {
+        if (x === 'side') state.sideOn = false;
+        if (x === 'insp') state.inspOn = false;
+        if (x === 'live') state.liveOn = false;
+        if (x === 'tx') state.txOn = false;
+      });
+    });
+  }
+  $$('.fitchip').forEach(b => b.classList.toggle('on', b.dataset.fit === fit));
+
+  apply(!hash);
+  requestAnimationFrame(measure);
+})();
+</script>
+</body>
+</html>

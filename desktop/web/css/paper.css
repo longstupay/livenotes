@@ -1,0 +1,119 @@
+/* ==================================================================
+   Paper 主题 · 桌面壳皮肤（overlay）
+
+   只在桌面壳里加载：壳用 ?embed=1&theme=paper 打开基座页面，基座适配器
+   读到 /api/host/manifest 后把本文件叠上去。网页版永远不会请求它。
+
+   换肤只动 token（CSS 变量）和少量表面色，页面结构不动；所以基座改版
+   不会让皮肤失效，皮肤改色也不会碰到网页版。
+   ================================================================== */
+html[data-theme="paper"]{
+  /* 页面通用命名（library / people / reader / highlights / pushes / glossary） */
+  --ink:#23201B; --text:#23201B; --muted:#6E675C; --faint:#9A9284;
+  --line:#E4DCCD; --border:#E4DCCD; --accent:#A76A22; --accent-soft:#F6EBD8;
+  --bg:#F3F0E9; --panel:#FFFDF8; --hover:#F6F1E6; --paper:#FFFDF8;
+  --danger:#C0503F; --ok:#2F7D5F; --warn:#B07C1F;
+  --warm:#B07C1F; --cool:#3F6F9E; --hot:#C0503F;
+  --jade:#2F7D5F; --red:#C0503F; --blue:#3F6F9E; --amber:#A76A22; --dim:#6E675C;
+  /* 工作台分类色 */
+  --cat-substantive:#A76A22; --cat-question_consult:#B07C1F;
+  --cat-host_control:#6E4B8E; --cat-chitchat:#8A8378; --cat-ad:#C0503F;
+  /* 说话人色板：基座按 --spk-0..9 取色，这里换成暖纸色 */
+  --spk-0:#A76A22; --spk-1:#2F7D5F; --spk-2:#B07C1F; --spk-3:#C0503F;
+  --spk-4:#6E4B8E; --spk-5:#3F6F9E; --spk-6:#8A5A3B; --spk-7:#7A6A55;
+  --spk-8:#9C6B2E; --spk-9:#8A8378;
+}
+html[data-theme="paper"] body{background:var(--bg);color:var(--ink)}
+
+/* ---------------------------------------------------------- 工作台 */
+html[data-theme="paper"] .panel{background:var(--panel);border-color:var(--border)}
+html[data-theme="paper"] .panel h3{background:#F8F4EC}
+html[data-theme="paper"] .timeline{background:#F8F4EC}
+html[data-theme="paper"] .urow,
+html[data-theme="paper"] .player,
+html[data-theme="paper"] .dim,
+html[data-theme="paper"] .point,
+html[data-theme="paper"] .sess-menu,
+html[data-theme="paper"] .modal,
+html[data-theme="paper"] .set-drawer,
+html[data-theme="paper"] .ws-list,
+html[data-theme="paper"] .spkmenu,
+html[data-theme="paper"] .gres,
+html[data-theme="paper"] .tbar input,
+html[data-theme="paper"] input[type=text],
+html[data-theme="paper"] input[type=search],
+html[data-theme="paper"] select{background:#FFFDF8}
+html[data-theme="paper"] .ov{background:#F9F4EA;border-left-color:var(--accent)}
+html[data-theme="paper"] .bucket:hover{background:#F1EBDD}
+html[data-theme="paper"] .bucket.sel{background:var(--accent-soft)}
+html[data-theme="paper"] .badge{border-color:var(--accent-soft)}
+html[data-theme="paper"] .chip.on{border-color:var(--accent-line,#E0C39A)}
+html[data-theme="paper"] .sess-btn:hover{border-color:#E0C39A}
+html[data-theme="paper"] button.primary:hover{background:#8C5518;color:#FFF8EC}
+html[data-theme="paper"] .p-btn:hover{background:#8C5518;border-color:#8C5518}
+html[data-theme="paper"] .dlg-actions .ok{background:#A76A22;border-color:#A76A22}
+html[data-theme="paper"] .dlg-actions .ok:hover{background:#8C5518}
+html[data-theme="paper"] .ws-tools button.primary{background:#A76A22;border-color:#A76A22}
+html[data-theme="paper"] .wf-actions button.primary{background:#A76A22;border-color:#A76A22}
+html[data-theme="paper"] .set-drawer .set-card,
+html[data-theme="paper"] .set-drawer input,
+html[data-theme="paper"] .set-drawer select{background:#FFFDF8}
+html[data-theme="paper"] .evt,
+html[data-theme="paper"] .tc,
+html[data-theme="paper"] .hit b,
+html[data-theme="paper"] .dim-h b{color:var(--accent)}
+
+/* ---------------------------------------------------- 文件 / 人物 */
+html[data-theme="paper"] .top{background:rgba(251,249,244,.94)}
+html[data-theme="paper"] .card,
+html[data-theme="paper"] table,
+html[data-theme="paper"] .tabs,
+html[data-theme="paper"] .tabs button,
+html[data-theme="paper"] button.act,
+html[data-theme="paper"] .detail,
+html[data-theme="paper"] .pitem{background-color:#FFFDF8}
+html[data-theme="paper"] th{background:#F8F4EC}
+html[data-theme="paper"] tr:hover td{background:#F8F4EC}
+html[data-theme="paper"] .bulk{background:#F6EBD8;border-color:#E0C39A;color:#7A4B12}
+html[data-theme="paper"] .tabs button.on{background:var(--accent-soft);color:var(--accent)}
+
+/* ------------------------------------------------ 阅读 / 高光榜 */
+html[data-theme="paper"] .doc-head,
+html[data-theme="paper"] .card,
+html[data-theme="paper"] .player,
+html[data-theme="paper"] .filters{background-color:#FFFDF8}
+html[data-theme="paper"] .p .p0{color:var(--ink)}
+html[data-theme="paper"] .chip.on{background:var(--accent-soft);border-color:#E0C39A;color:var(--accent)}
+
+/* 页面里少数写死的浅蓝底（主按钮、选中行、标签），在纸面上换成琥珀底，
+   否则暖色页面里会突然冒出一块冷蓝。 */
+html[data-theme="paper"] button.act.primary,
+html[data-theme="paper"] .b-info,
+html[data-theme="paper"] .acts .fb button.on,
+html[data-theme="paper"] .bulk{
+  background:#F6EBD8;border-color:#E0C39A;color:#7A4B12}
+html[data-theme="paper"] .pitem.on,
+html[data-theme="paper"] .p.on,
+html[data-theme="paper"] .tag.confirmed,
+html[data-theme="paper"] .focusbar{
+  background:#F6EBD8;color:#7A4B12}
+html[data-theme="paper"] .pitem.on{box-shadow:inset 3px 0 0 var(--accent)}
+html[data-theme="paper"] .focusbar{border-color:#E0C39A}
+html[data-theme="paper"] .eu.dirty textarea{border-color:#E0C39A;background:#FBF6EC}
+html[data-theme="paper"] .notice{background:#F6EBD8;border-color:#E0C39A;color:#7A4B12}
+
+/* 交互色：焦点环、链接、选区都换成纸面琥珀，别在暖色里跳出一圈蓝 */
+html[data-theme="paper"] a{color:var(--accent)}
+html[data-theme="paper"] :focus{outline-color:#A76A22}
+html[data-theme="paper"] :focus-visible{outline-color:#A76A22}
+html[data-theme="paper"] ::selection{background:rgba(167,106,34,.22)}
+html[data-theme="paper"] #tlBars{border-bottom-color:#D9CFBC}
+html[data-theme="paper"] .urow.hl{background:#FBF0D2}
+html[data-theme="paper"] .sess-row.on,
+html[data-theme="paper"] .sess-btn{border-color:var(--border)}
+
+/* 滚动条也回到纸面 */
+html[data-theme="paper"] ::-webkit-scrollbar{width:9px;height:9px}
+html[data-theme="paper"] ::-webkit-scrollbar-thumb{background:#D8CFBE;border-radius:8px}
+html[data-theme="paper"] ::-webkit-scrollbar-thumb:hover{background:#C8BDA8}
+html[data-theme="paper"] ::-webkit-scrollbar-track{background:transparent}

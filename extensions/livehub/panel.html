@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>监听中心（spike）</title>
+<style>
+:root{--ink:#1d2330;--muted:#6b7480;--line:#e6e9ef;--accent:#2b5cff;--ok:#0a7a4a;--bad:#b3261e}
+*{box-sizing:border-box}
+body{margin:0;background:#f4f6f9;color:var(--ink);font:13px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+.top{display:flex;align-items:center;gap:12px;padding:12px 20px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0}
+.top b{font-size:14px}
+.top .sp{flex:1}
+.sum{font-size:12px;color:var(--muted)}
+.wrap{padding:18px 20px 60px}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);font-size:12.5px;vertical-align:middle}
+th{background:#fafbfd;color:var(--muted);font-weight:600;font-size:11.5px}
+tr:last-child td{border-bottom:0}
+.title{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lv{width:110px;height:6px;background:#eef1f6;border-radius:3px;overflow:hidden}
+.lv i{display:block;height:100%;width:0;background:var(--ok);transition:width .15s}
+.mono{font-variant-numeric:tabular-nums;color:var(--muted)}
+button{font:inherit;font-size:12px;padding:4px 11px;border-radius:8px;border:1px solid #d8dde6;background:#fff;cursor:pointer;color:#3c4757}
+button:hover{border-color:var(--accent);color:var(--accent)}
+button.danger:hover{border-color:var(--bad);color:var(--bad)}
+.empty{padding:40px;text-align:center;color:var(--muted);background:#fff;border:1px dashed var(--line);border-radius:12px;line-height:2}
+.bar{display:flex;gap:10px;align-items:center;margin:0 0 14px}
+label{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+.rooms{margin:0 0 14px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.rooms .rh{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.rooms .rh b{font-size:12.5px}
+.rooms .rh .sp{flex:1}
+.rooms .ritem{display:flex;align-items:center;gap:10px;padding:5px 0;border-top:1px dashed var(--line);font-size:12.5px}
+.rooms .ritem:first-of-type{border-top:0}
+.rooms .rn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rooms .st{font-size:11px;color:var(--muted)}
+.rooms .st.on{color:var(--ok)}
+.rooms .st.wait{color:#c9761c}
+.note{margin-top:14px;font-size:11.5px;color:var(--muted);line-height:1.9}
+.bad{color:var(--bad)}
+.conn{font-size:12px;color:var(--muted)}
+.conn.on{color:var(--ok)}
+.conn.off{color:var(--bad)}
+.tag{display:inline-block;font-size:10.5px;padding:0 6px;border-radius:4px;margin-left:6px;
+  background:#eef3ff;color:#1d3ea8}
+.tag.warn{background:#fdf0e3;color:#a4430c}
+.row-dead td{opacity:.62;background:#fdf7f7}
+</style>
+</head>
+<body>
+<div class="top">
+  <b>🎧 监听中心</b>
+  <span class="sum" id="sum">—</span>
+  <span class="conn" id="conn">—</span>
+  <span class="sp"></span>
+  <button id="retry">重试连接</button>
+  <button id="clear" class="danger" style="display:none">清空断流记录</button>
+  <button id="all" class="danger">全部停止</button>
+</div>
+<div class="wrap">
+  <div class="bar">
+    <label><input type="checkbox" id="send" checked> 把音频送到本地服务（127.0.0.1:8765）</label>
+    <span class="st" id="sendHint">关掉它 = 只监听不记录，网页端看不到任何东西</span>
+    <label style="margin-left:auto"><input type="checkbox" id="closeOnStop" checked> 停止时连标签页一起关闭</label>
+  </div>
+  <div class="rooms" id="rooms"></div>
+  <div id="list"></div>
+  <div class="note">
+    <b>这是兜底入口：</b>日常用「收听」页贴链接就够了——那边会自己开浏览器、自己静音、
+    关掉网页也不停录（<a href="http://127.0.0.1:8765/rooms" target="_blank">打开收听页</a>）。
+    这里保留给"你已经在看某个标签页、想临时抓一下"的场景。<br>
+    <b>看什么：</b>切到别的标签页、把窗口最小化，这里的「电平」和「块数」还动吗？<br>
+    <b>听什么：</b>捕获期间标签页<b>完全不出声</b>（声音只进了扩展）；<b>停止时也会自动把标签页静音</b>，
+    否则 5 路一起停就是 5 个直播间同时外放。想恢复声音，点那一行的「取消静音」。<br>
+    <b>为什么要点图标：</b>Chrome 要求每个标签页被用户调用过一次扩展才允许抓它的音频。<br>
+    <b>更快：</b>切到直播间标签页，按 <b>Ctrl+Shift+Y</b>（Mac 是 ⌘+Shift+Y），不用去点工具栏。
+  </div>
+</div>
+<script src="panel.js"></script>
+</body>
+</html>

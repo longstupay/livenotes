@@ -1,0 +1,6 @@
+# 抖音直取（LIVENOTES_CAPTURE_MODE=direct）
+#
+# ffmpeg 不是 pip 包：必须单独安装并加入 PATH（Windows 可用 gyan.dev 的 full build）。
+# 直取默认直接从 webcast.amemv.com 的 reflow 页取播放地址，不依赖 streamlink；
+# 只有 reflow 页结构变化、拿不到地址时才用它兜底（可选安装）。
+streamlink>=8.6

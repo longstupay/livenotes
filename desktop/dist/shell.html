@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="studio">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LiveNotes · 直播语记</title>
+<link rel="stylesheet" href="/shell.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar" data-tauri-drag-region>
+    <div class="brand" data-tauri-drag-region>
+      <span class="mark">LN</span>
+      <span class="wordmark" data-tauri-drag-region>LiveNotes</span>
+    </div>
+    <div class="crumb" id="crumb" data-tauri-drag-region><b>收听</b><i>/</i><span id="crumbSub">全部直播间</span></div>
+    <button class="cmdk" id="cmdkBtn" aria-label="打开命令面板">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg>
+      <span>搜索或执行命令</span>
+      <kbd>Ctrl K</kbd>
+    </button>
+    <div class="top-right">
+      <button class="rec-pill idle" id="recPill" title="正在采集的直播间">
+        <span class="dot" id="recDot"></span><b id="liveCount">0</b> 路在听
+      </button>
+      <div class="pane-tools" id="paneTools" role="group" aria-label="面板">
+        <button class="icon-btn on" data-pane="side" title="房间列表  [" aria-label="房间列表">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg>
+        </button>
+        <button class="icon-btn on" data-pane="live" title="直播页面" aria-label="直播页面">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9.5l4.5 2.5-4.5 2.5z" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="icon-btn on" data-pane="tx" title="实时字幕  \" aria-label="实时字幕">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6" stroke-linecap="round"/></svg>
+        </button>
+        <button class="icon-btn on" data-pane="insp" title="本场声音  ]" aria-label="本场声音">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>
+        </button>
+      </div>
+      <button class="icon-btn" id="btnSettings" title="设置" aria-label="设置">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.38a1.7 1.7 0 0 0-1 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.1-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.62 15a1.7 1.7 0 0 0-1.56-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.65 8.9a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.62h.08A1.7 1.7 0 0 0 10.1 3.06V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15.1 4.65a1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.38 9v.08A1.7 1.7 0 0 0 20.94 10.1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1.9z"/></svg>
+      </button>
+      <div class="win-controls">
+        <button class="win-btn" id="winMin" title="最小化" aria-label="最小化">
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 5h6" stroke="currentColor" stroke-width="1"/></svg>
+        </button>
+        <button class="win-btn" id="winMax" title="最大化" aria-label="最大化">
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><rect x="2" y="2" width="6" height="6" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+        </button>
+        <button class="win-btn close" id="winClose" title="关闭窗口" aria-label="关闭">
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="1.1"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="body" id="body">
+    <nav class="rail" id="rail" aria-label="主导航">
+      <button class="rail-item on" data-view="listen" title="收听">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 12h2.5l2-5 3 10 2.5-7 2 4H21"/></svg>
+        <span>收听</span><i class="badge" id="railBadge" hidden>0</i>
+      </button>
+      <button class="rail-item" data-view="workbench" title="工作台">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>
+        <span>工作台</span>
+      </button>
+      <button class="rail-item" data-view="files" title="文件中心">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        <span>文件</span>
+      </button>
+      <button class="rail-item" data-view="people" title="人物档案">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 5.5a3 3 0 1 1 0 5.8M17.5 14.2A5.5 5.5 0 0 1 20.5 19"/></svg>
+        <span>人物</span>
+      </button>
+      <div class="rail-spacer"></div>
+      <button class="rail-item" data-view="settings" title="设置">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2M5.5 5.5l1.4 1.4M17.1 17.1l1.4 1.4M18.5 5.5l-1.4 1.4M6.9 17.1l-1.4 1.4"/></svg>
+        <span>设置</span>
+      </button>
+    </nav>
+
+    <aside class="sidebar" id="sidebar">
+      <div class="side-head">
+        <h1 id="sideTitle">在听</h1>
+        <span class="count" id="sideCount">0</span>
+        <span class="grow"></span>
+        <button class="icon-btn" id="btnAdd" title="添加直播间" aria-label="添加直播间">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <button class="icon-btn" id="btnSideClose" title="收起房间列表" aria-label="收起房间列表">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="side-tools" id="sideTools"></div>
+      <div class="add-box" id="addBox">
+        <input class="add-input" id="addInput" placeholder="粘贴直播间链接，回车开始听" autocomplete="off" spellcheck="false">
+        <div class="add-actions">
+          <button class="btn primary sm" id="addGo">开始听</button>
+          <button class="btn sm" id="addCancel">取消</button>
+          <span class="add-hint">抖音 / 快手 / B 站</span>
+        </div>
+      </div>
+      <div class="side-list" id="sideList"></div>
+      <div class="side-foot" id="sideFoot">关掉窗口不影响录音 · 最多 5 路</div>
+    </aside>
+
+    <main class="canvas" id="canvas">
+      <section class="listen" id="listenView">
+        <div class="stage-head">
+          <span class="stage-ch" id="stageCh">CH--</span>
+          <div class="stage-title">
+            <b id="stageName">选择一个直播间</b>
+            <span id="stageMeta">—</span>
+          </div>
+          <div class="stage-actions">
+            <div class="seg" id="stageSeg" role="tablist" aria-label="舞台模式">
+              <button data-stage="signal" role="tab">信号</button>
+              <button data-stage="page" role="tab">页面</button>
+              <button data-stage="annotate" role="tab"><span class="live"></span>标注</button>
+            </div>
+            <button class="btn sm" id="btnWall">监控墙</button>
+            <button class="btn sm danger" id="btnStop" disabled>停止</button>
+          </div>
+        </div>
+        <div class="stage-wrap" id="stageWrap">
+          <canvas id="scope"></canvas>
+          <div class="stage-watermark" id="stageMark">CH--</div>
+          <div class="stage-stats" id="stageStats"></div>
+          <div class="stage-badge" id="stageBadge" hidden></div>
+          <div class="stage-empty" id="stageEmpty">
+            <h2>还没有在听的直播间</h2>
+            <p>把直播间链接粘到左边，开始听。采集在引擎里独立跑，切到工作台、关掉窗口都不会停。</p>
+            <button class="btn primary" id="emptyAdd">＋ 添加直播间</button>
+          </div>
+          <div class="stage-error" id="stageError" hidden>
+            <h3 id="stageErrTitle">这一路没有在采集</h3>
+            <p id="stageErrText"></p>
+            <button class="btn primary sm" id="stageRetry">重试这一路</button>
+          </div>
+          <div class="wall" id="wall" hidden></div>
+          <div class="annot" id="annot" hidden>
+            <section class="apane" id="livePane">
+              <div class="apane-head">
+                <span class="apane-dot"></span>
+                <b class="apane-title">直播页面</b>
+                <span class="apane-meta" id="liveMeta">原生视图 · 跟随面板</span>
+                <span class="grow"></span>
+                <button class="apane-btn" data-pane-act="max" data-pane="live" title="放大画面" aria-label="放大画面">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M7 2h3v3M5 10H2V7M10 2L6.6 5.4M2 10l3.4-3.4"/></svg>
+                </button>
+                <button class="apane-btn close" data-pane-act="close" data-pane="live" title="关闭画面" aria-label="关闭画面">
+                  <svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6"/></svg>
+                </button>
+              </div>
+              <div class="annot-page" id="annotPage">
+                <div class="annot-page-empty" id="annotPageEmpty">
+                  <span class="ap-tag">页面</span>
+                  <b>这一路没有可显示的直播页</b>
+                  <p>字幕仍可继续标注。登录页、已结束的房间不会自动打开。</p>
+                </div>
+              </div>
+            </section>
+
+            <div class="asplit" id="asplit" role="separator" aria-orientation="horizontal"
+                 title="拖动调整画面高度，双击复位"></div>
+
+            <section class="tx-pane" id="txPane">
+              <div class="tx-head">
+                <h3>实时字幕</h3><span class="n" id="txCount">0</span>
+                <div class="tx-tabs" id="txTabs">
+                  <button class="tx-tab on" data-tab="all">全部</button>
+                  <button class="tx-tab" data-tab="todo">待认领 <span id="txTodoN">0</span></button>
+                </div>
+                <button class="tx-auto" id="txAuto" title="新句子出现时自动滚到底"><i></i>自动滚动</button>
+                <span class="grow"></span>
+                <button class="apane-btn" data-pane-act="max" data-pane="tx" title="放大字幕" aria-label="放大字幕">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M7 2h3v3M5 10H2V7M10 2L6.6 5.4M2 10l3.4-3.4"/></svg>
+                </button>
+                <button class="apane-btn close" data-pane-act="close" data-pane="tx" title="关闭字幕" aria-label="关闭字幕">
+                  <svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6"/></svg>
+                </button>
+              </div>
+              <div class="tx-banner" id="txBanner" hidden></div>
+              <div class="tx-scroll" id="txScroll"></div>
+              <div class="tx-foot">
+                <span>M 打点</span><span>Space 暂停</span><span class="sp"></span>
+                <span id="txFootNote">等待下一句</span>
+              </div>
+            </section>
+
+            <div class="annot-empty" id="annotEmpty" hidden>
+              <b>画面和字幕都收起来了</b>
+              <p>用右上角的图标重新打开直播页面或实时字幕。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="frame-view no-head" id="frameView" hidden>
+        <div class="frame-head">
+          <button class="icon-btn" id="frameBack" title="返回">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+          </button>
+          <b id="frameTitle">实时字幕</b>
+          <span id="frameMeta"></span>
+          <span class="grow"></span>
+          <button class="btn sm" id="frameRaw">原工具栏</button>
+        </div>
+        <iframe id="frame" title="LiveNotes 页面"></iframe>
+      </section>
+    </main>
+
+    <aside class="inspector" id="inspector">
+      <div class="insp-head">
+        <button class="icon-btn insp-close" id="btnInspClose" title="收起本场声音" aria-label="收起本场声音">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+        <div class="insp-kicker" id="inspKicker">尚未选择</div>
+        <h2 id="inspTitle">选择一个直播间</h2>
+        <p id="inspSub">右边会显示这一路的实时状态和字幕。</p>
+      </div>
+      <div class="insp-scroll" id="inspScroll"></div>
+      <div class="insp-actions" id="inspActions"></div>
+    </aside>
+  </div>
+
+  <footer class="statusbar">
+    <span class="engine" id="engineStatus"><i></i><span>正在连接本地引擎…</span></span>
+    <span class="sep"></span>
+    <span id="statRooms">0 个直播间</span>
+    <span class="sep"></span>
+    <span id="statLive">0 路在听</span>
+    <span class="hint" id="statHint">关窗后继续录音 · Ctrl K 命令</span>
+  </footer>
+</div>
+
+<div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+
+<div class="ctx-menu" id="ctxMenu" hidden role="menu" tabindex="-1"></div>
+
+<div class="spk-pop" id="spkPop" hidden role="dialog" aria-label="这一簇是谁说的"></div>
+
+<div class="modal" id="modal" hidden>
+  <div class="sheet" id="modalSheet"></div>
+</div>
+
+<div class="palette" id="palette" hidden>
+  <div class="palette-box" role="dialog" aria-modal="true" aria-label="命令面板">
+    <div class="palette-input">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg>
+      <input id="pInput" placeholder="输入命令：收听、工作台、添加直播间、停止全部…" autocomplete="off" spellcheck="false">
+      <kbd>Esc</kbd>
+    </div>
+    <div class="palette-list" id="pList"></div>
+    <div class="palette-foot"><span>↑↓ 选择</span><span>Enter 执行</span><span class="grow">Ctrl K 随时呼出</span></div>
+  </div>
+</div>
+
+<script src="/shell.js"></script>
+</body>
+</html>

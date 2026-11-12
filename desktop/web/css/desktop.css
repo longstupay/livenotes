@@ -1,0 +1,58 @@
+/* ==================================================================
+   桌面壳的应用内浮层（overlay）
+
+   WebView2 关掉了浏览器原生右键菜单，所以桌面版必须有应用内菜单；
+   选中文字后的「全库搜索」也是桌面专属（网页版用浏览器原生菜单）。
+   这些是壳内交互，不是页面能力，所以放在 overlay，不放进基座。
+
+   加载时机：基座适配器读到 host.json 之后；此时 window.LN 已存在。
+   ================================================================== */
+
+/* ---------------- 右键菜单 ---------------- */
+html.ln-embed .ln-ctx{position:fixed;z-index:99999;min-width:180px;padding:5px;border-radius:10px;
+  background:#fff;border:1px solid #e2e7f0;box-shadow:0 10px 30px rgba(16,24,40,.18);
+  font:12.5px/1.4 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  color:#2a3240;user-select:none}
+html.ln-embed .ln-ctx-item{display:flex;align-items:center;gap:12px;width:100%;padding:7px 10px;
+  border:0;border-radius:7px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+html.ln-embed .ln-ctx-item:hover{background:#f1f5fb}
+html.ln-embed .ln-ctx-item:disabled{opacity:.42;cursor:default;background:transparent}
+html.ln-embed .ln-ctx-item.danger{color:#c0392b}
+html.ln-embed .ln-ctx-item.danger:hover{background:#fdeceb}
+html.ln-embed .ln-ctx-hint{margin-left:auto;color:#98a2b3;font-size:11px}
+html.ln-embed .ln-ctx-sep{height:1px;margin:4px 6px;background:#edf0f5}
+
+/* ---------------- 轻提示 ---------------- */
+html.ln-embed .ln-toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:99999;
+  background:#1d2330;color:#fff;padding:8px 16px;border-radius:8px;font-size:12.5px;
+  box-shadow:0 6px 20px rgba(16,24,40,.2)}
+
+/* ---------------- 选中文字 → 全库搜索 ---------------- */
+html.ln-embed .ln-search{position:fixed;left:50%;top:8vh;transform:translateX(-50%);z-index:99998;
+  width:min(620px,calc(100vw - 32px));max-height:76vh;display:flex;flex-direction:column;
+  background:#fff;border:1px solid #e2e7f0;border-radius:12px;overflow:hidden;
+  box-shadow:0 18px 50px rgba(16,24,40,.22);color:#2a3240;
+  font:13px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+html.ln-embed .ln-s-head{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid #edf0f5}
+html.ln-embed .ln-s-head span{flex:1;color:#6b7480;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html.ln-embed .ln-s-head button{border:0;background:transparent;font-size:18px;line-height:1;color:#98a2b3;cursor:pointer}
+html.ln-embed .ln-s-body{overflow:auto;padding:6px}
+html.ln-embed .ln-s-row{display:flex;flex-direction:column;gap:2px;width:100%;padding:8px 10px;border:0;
+  border-radius:8px;background:transparent;text-align:left;font:inherit;color:inherit;cursor:pointer}
+html.ln-embed .ln-s-row:hover{background:#f1f5fb}
+html.ln-embed .ln-s-meta{font-size:11px;color:#98a2b3}
+html.ln-embed .ln-s-title{font-size:11.5px;color:#4a5464;font-weight:600}
+html.ln-embed .ln-s-text{font-size:12.5px;color:#2a3240;line-height:1.55}
+html.ln-embed .ln-s-empty{padding:34px 10px;text-align:center;color:#98a2b3}
+
+/* 深色工作室（收听/实时字幕）里换成暗色浮层 */
+html.ln-embed[data-theme="studio"] .ln-ctx{background:#1e2734;border-color:#34404f;color:#dbe4f0}
+html.ln-embed[data-theme="studio"] .ln-ctx-item:hover{background:#2a3646}
+html.ln-embed[data-theme="studio"] .ln-ctx-sep{background:#34404f}
+html.ln-embed[data-theme="studio"] .ln-ctx-item.danger{color:#ff8f85}
+html.ln-embed[data-theme="studio"] .ln-ctx-item.danger:hover{background:#3a2528}
+html.ln-embed[data-theme="studio"] .ln-search{background:#1e2734;border-color:#34404f;color:#dbe4f0}
+html.ln-embed[data-theme="studio"] .ln-s-head{border-color:#34404f}
+html.ln-embed[data-theme="studio"] .ln-s-row:hover{background:#2a3646}
+html.ln-embed[data-theme="studio"] .ln-s-text{color:#dbe4f0}
+html.ln-embed[data-theme="studio"] .ln-s-title{color:#aebdd0}

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>推送记录 · 直播语记</title>
+<style>
+:root{--ink:#1d2330;--muted:#6b7480;--faint:#9aa3b0;--line:#e6e9ef;--accent:#2b5cff;--bg:#f4f6f9}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+ font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+.top{position:sticky;top:0;z-index:9;display:flex;align-items:center;gap:12px;padding:10px 18px;
+ background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top .brand{font-weight:700;font-size:13px}
+.top a{font-size:12.5px;color:var(--muted);text-decoration:none}
+.grow{flex:1}
+.wrap{max-width:920px;margin:0 auto;padding:26px 18px 120px}
+h1{font-size:21px;margin:0 0 10px}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
+select{font:inherit;font-size:12.5px;padding:7px 9px;border-radius:8px;border:1px solid #dfe4ec;background:#fff}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.chip{font-size:12px;padding:5px 10px;border-radius:999px;background:#fff;border:1px solid var(--line);color:#4a5464}
+.chip b{color:var(--ink)}
+.lead{font-size:12.5px;color:var(--muted);line-height:1.9;background:#fff;border:1px solid var(--line);
+ border-radius:10px;padding:12px 14px;margin:0 0 16px}
+.lead code{font-size:11.5px;background:#f1f3f7;padding:1px 5px;border-radius:4px;color:#3c4757}
+.rows{display:flex;flex-direction:column;gap:8px}
+.row{display:grid;grid-template-columns:112px 64px 1fr auto;gap:12px;align-items:center;
+ background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.t{font-size:11.5px;color:var(--faint);font-variant-numeric:tabular-nums;white-space:nowrap}
+.badge{font-size:11px;padding:3px 8px;border-radius:999px;text-align:center;white-space:nowrap}
+.sent{background:#eaf7f0;color:#0a7a4a}
+.skipped{background:#f1f3f7;color:#6b7480}
+.failed{background:#fdeceb;color:#b3261e}
+.pending{background:#fff4e5;color:#a15c00}
+.main{min-width:0}
+.who{font-size:12px;color:var(--muted);margin-bottom:3px}
+.why{font-size:12.5px;color:#3c4757;line-height:1.65;overflow:hidden;text-overflow:ellipsis;
+ display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.reason{font-size:11.5px;color:#a15c00;margin-top:4px}
+.go{font-size:12px;color:var(--accent);text-decoration:none;white-space:nowrap}
+.empty{padding:40px;text-align:center;color:var(--faint);font-size:13px}
+@media(max-width:640px){.row{grid-template-columns:1fr;gap:6px}.t{order:-1}}
+</style>
+</head>
+<body>
+<div class="top" data-ln-region="topbar">
+  <span class="brand">直播语记 · 推送记录</span>
+  <a href="/">← 首页</a>
+  <a href="/glossary">📚 术语表</a>
+  <span class="grow"></span>
+  <a href="/highlights" id="hi">🔥 高光榜 ›</a>
+</div>
+<div class="wrap" data-ln-region="stage">
+  <h1>推送记录</h1>
+  <div class="bar">
+    <select id="sess"></select>
+    <span class="chip" id="start"></span>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="lead">
+    这里回答两个问题：<b>推了什么</b>、<b>没推是为什么</b>。原因码：
+    <code>cooldown</code> 距上一条太近 ·
+    <code>session_cap</code> 本场推满 ·
+    <code>daily_cap</code> 今日额度用完 ·
+    <code>learned_bias</code> 你标过这类的"没用" ·
+    <code>no_open_id / no_bot</code> 没配接收人 ·
+    <code>send_fail</code> 飞书发送失败 ·
+    <code>card_fallback</code> 卡片被拒已回退文本。
+  </div>
+  <div class="rows" id="rows"></div>
+</div>
+<script>
+var S={sid:'',data:null};
+function $(s){return document.querySelector(s)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function api(path,opt){return fetch(path,opt).then(function(r){return r.json().then(function(j){
+ if(!r.ok) throw new Error(j.error||('HTTP '+r.status)); return j;})})}
+var REASON={
+  learned_bias:'学到的偏好：这类你标过“没用”，门槛提高了',
+  cooldown:'冷却中：距上一条不足设定间隔',
+  session_cap:'本场已推满上限',
+  daily_cap:'今日推送额度已用完',
+  no_open_id:'还没配置接收人（先在飞书给机器人发一句话）',
+  no_bot:'没配置飞书凭证',
+  send_fail:'飞书发送失败',
+  card_fallback:'卡片被拒，已改发纯文本',
+  exception:'发送过程异常',
+  all_pushed:'全都实时推过了，回顾静默',
+  no_highlight:'本场没有高光'
+};
+var STATUS={sent:'已发',skipped:'未推',failed:'失败',pending:'发送中'};
+function ts(s){return s?String(s).replace('T',' ').slice(5,16):'—'}
+function peakOf(item){var m=/^hl:([0-9.]+)$/.exec(item||'');return m?Number(m[1]):null}
+function paint(){
+  var d=S.data;if(!d)return;
+  var ov=d.overview||{},b=d.budget||{},c=ov.counts||{};
+  $('#start').textContent=d.session&&d.session.started_at?('开始 '+ts(d.session.started_at)):'';
+  $('#hi').href='/highlights?session='+encodeURIComponent(S.sid);
+  var learned=(d.learned||[]).filter(function(x){return x.delta});
+  $('#chips').innerHTML=[
+    '<span class="chip">今日高光 <b>'+(b.daily_used||0)+'/'+(b.daily_cap||0)+'</b></span>',
+    '<span class="chip">本场实时 <b>'+(b.session_sent||0)+'/'+(b.session_cap||0)+'</b></span>',
+    '<span class="chip">冷却 <b>'+Math.round((b.cooldown_s||0)/60)+' 分钟</b></span>',
+    '<span class="chip">已发 <b>'+(c.sent||0)+'</b> · 未推 <b>'+(c.skipped||0)+'</b> · 失败 <b>'+(c.failed||0)+'</b></span>'
+  ].join('') + (learned.length?('<span class="chip">偏好：'+learned.map(function(x){
+      return esc(x.label)+(x.delta<0?' 少推':' 多推')+'（'+x.good+'👍/'+x.bad+'👎）';
+    }).join(' · ')+'</span>'):'');
+  var rows=ov.rows||[];
+  $('#rows').innerHTML=rows.length?rows.map(function(r){
+    var peak=peakOf(r.item);
+    var text=(r.text||'').split('\n').filter(Boolean).slice(0,2).join(' ');
+    var link=peak!=null?('/reader?session='+encodeURIComponent(S.sid)+'&t='+Math.floor(peak)):'';
+    return '<div class="row">'
+      +'<span class="t">'+esc(ts(r.created_at))+'</span>'
+      +'<span class="badge '+(r.status||'')+'">'+(STATUS[r.status]||r.status||'')+'</span>'
+      +'<div class="main"><div class="who">'+(r.item==='digest'?'本场回顾':'高光 '+(peak!=null?fmt(peak):''))
+      +' · 分数 '+Number(r.score||0).toFixed(1)+'</div>'
+      +'<div class="why">'+esc(text||'（无正文）')+'</div>'
+      +((r.status==='skipped'||r.status==='failed')&&r.reason?('<div class="reason">'+(REASON[r.reason]||esc(r.reason))+'</div>'):'')
+      +'</div>'
+      +'<a class="go" '+(link?('href="'+link+'"'):'')+'>'+(link?'回听 ›':'')+'</a>'
+      +'</div>';
+  }).join(''):'<div class="empty">这场还没有推送记录（没配飞书，或还没命中高光）。</div>';
+}
+function fmt(t){t=Math.max(0,Math.floor(t||0));var m=Math.floor(t/60),s=t%60;
+ return m+':'+(s<10?'0':'')+s}
+function load(sid){
+  var url='/api/pushes'+(sid?('?session_id='+encodeURIComponent(sid)):'');
+  api(url).then(function(d){
+    S.data=d;
+    var sessions=d.sessions||[];
+    if(!S.sid){S.sid=(d.session&&d.session.id)||(sessions[0]&&sessions[0].id)||''}
+    $('#sess').innerHTML=sessions.map(function(s){
+      return '<option value="'+esc(s.id)+'"'+(s.id===S.sid?' selected':'')+'>'
+        +esc((s.title||s.id).slice(0,36))+'</option>';
+    }).join('')||'<option>没有场次</option>';
+    paint();
+  }).catch(function(e){$('#rows').innerHTML='<div class="empty">加载失败：'+esc(e.message)+'</div>'});
+}
+$('#sess').onchange=function(){S.sid=this.value;load(S.sid)};
+load('');
+</script>
+</body>
+</html>

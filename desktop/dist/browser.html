@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LiveNotes · 应用内浏览器</title>
+<style>
+  :root{
+    --bg:#f4f6f9;--panel:#fff;--ink:#1d2330;--muted:#6b7480;--faint:#9aa3b2;
+    --line:#e1e6ee;--accent:#2b5cff;--accent-soft:#eef2ff;--ok:#0a7a4a;--warn:#b26a00;--bad:#b3261e;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    font-size:13px}
+  button{font:inherit;color:inherit;background:transparent;border:0;cursor:pointer}
+  button:disabled{opacity:.4;cursor:default}
+
+  /* 112px = 38 标签栏 + 46 工具栏 + 28 状态栏；JS 会读实际高度 */
+  .chrome{position:relative;z-index:3;height:112px;background:var(--panel);
+    border-bottom:1px solid var(--line);display:flex;flex-direction:column}
+  .tabs{height:38px;display:flex;align-items:flex-end;gap:6px;padding:6px 10px 0;
+    border-bottom:1px solid var(--line);overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}
+  .brand{flex:0 0 auto;font-weight:700;font-size:12.5px;color:var(--muted);
+    padding:0 10px 8px 2px;white-space:nowrap;letter-spacing:.2px}
+  .tab{flex:0 0 auto;display:flex;align-items:center;gap:7px;max-width:230px;height:31px;
+    padding:0 8px 0 10px;border:1px solid var(--line);border-bottom:0;border-radius:9px 9px 0 0;
+    background:#f7f9fc;color:#4a5464;cursor:pointer;user-select:none}
+  .tab:hover{background:#eef3fb}
+  .tab.active{background:var(--panel);color:var(--ink);border-color:#cfd8e6;
+    box-shadow:0 -1px 0 var(--accent) inset}
+  .tab .dot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:0 0 auto}
+  .tab .dot.wait{background:#d9a441}
+  .tab .dot.ok{background:var(--ok)}
+  .tab .dot.tool{background:var(--accent)}
+  .tab .dot.off{background:#c3c9d4}
+  .tab .tname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+  .tab .tclose{width:18px;height:18px;line-height:16px;text-align:center;border-radius:5px;
+    color:var(--faint);font-size:14px;flex:0 0 auto}
+  .tab .tclose:hover{background:#e7ecf5;color:var(--bad)}
+  .newtab{flex:0 0 auto;width:26px;height:26px;margin:0 0 3px;border-radius:7px;
+    color:var(--muted);font-size:18px;line-height:22px}
+  .newtab:hover{background:#eef3fb;color:var(--accent)}
+
+  .toolbar{height:46px;display:flex;align-items:center;gap:6px;padding:0 10px}
+  .navbtn{width:30px;height:30px;border-radius:8px;color:#4a5464;font-size:16px;line-height:28px}
+  .navbtn:hover{background:#eef3fb;color:var(--accent)}
+  .addr{flex:1;height:32px;border:1px solid var(--line);border-radius:9px;background:#fbfcfe;
+    padding:0 12px;font:inherit;font-size:12.5px;color:var(--ink);outline:none;min-width:120px}
+  .addr:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px var(--accent-soft)}
+  .btn{height:30px;padding:0 11px;border:1px solid #d9dfe9;border-radius:8px;background:#fff;
+    color:#465062;font-size:12px;white-space:nowrap}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{filter:brightness(1.06);color:#fff}
+  .btn.danger:hover{border-color:var(--bad);color:var(--bad)}
+  .sep{width:1px;height:20px;background:var(--line);margin:0 3px}
+
+  .status{height:28px;display:flex;align-items:center;gap:10px;padding:0 13px;
+    border-top:1px solid #eef1f6;background:#fbfcfe;font-size:11.5px;color:var(--muted);
+    white-space:nowrap;overflow:hidden}
+  .status .stat{overflow:hidden;text-overflow:ellipsis}
+  .status .err{color:var(--bad);overflow:hidden;text-overflow:ellipsis}
+  .status .hint{color:var(--faint);margin-left:auto;flex:0 0 auto}
+
+  .content{position:absolute;left:0;right:0;top:112px;bottom:0;background:var(--bg)}
+  .empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:10px;padding:40px;text-align:center;color:var(--muted)}
+  .empty h1{font-size:20px;margin:0;color:var(--ink);letter-spacing:.2px}
+  .empty p{max-width:560px;line-height:1.9;margin:0;font-size:12.5px}
+  .empty .kbd{display:inline-block;padding:1px 7px;border:1px solid var(--line);border-radius:6px;
+    background:#fff;color:#465062;font-size:11.5px}
+</style>
+</head>
+<body>
+  <div class="chrome" id="chrome">
+    <div class="tabs" id="tabs">
+      <span class="brand">LiveNotes · 浏览器</span>
+      <button class="newtab" id="btnNew" title="新标签页（聚焦地址栏）">＋</button>
+    </div>
+    <div class="toolbar">
+      <button class="navbtn" id="btnBack" title="后退">←</button>
+      <button class="navbtn" id="btnFwd" title="前进">→</button>
+      <button class="navbtn" id="btnReload" title="刷新">⟳</button>
+      <input class="addr" id="addr" placeholder="粘贴直播间链接，回车在新标签页打开" autocomplete="off" spellcheck="false">
+      <button class="btn primary" id="btnOpen">打开</button>
+      <span class="sep"></span>
+      <button class="btn" id="btnMute" title="静音当前标签页（不影响采集）">🔊 静音</button>
+      <button class="btn" id="btnLive" title="打开这一路的实时字幕">💬 字幕</button>
+      <button class="btn danger" id="btnStop" title="停止采集并关闭当前标签页">■ 停止并关闭</button>
+    </div>
+    <div class="status">
+      <span class="stat" id="stat">粘贴直播间链接开始</span>
+      <span class="err" id="err"></span>
+      <span class="hint">所有标签页共用登录 · 关窗口会停止所有采集</span>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="empty" id="empty">
+      <h1>应用内浏览器</h1>
+      <p>把直播间链接粘到地址栏，回车打开。页面在应用内的 WebView2 里播放，
+        音频通过 <code>captureStream()</code> 直接进本地引擎，不依赖外部 Chrome/Edge。</p>
+      <p>多个标签页共用一个登录目录；采集状态和字幕在下方状态栏实时更新。
+        需要临时用系统浏览器时，托盘里仍有「在浏览器中打开」。</p>
+      <p style="color:var(--faint)">本地测试站：<span class="kbd">python desktop/test/site_server.py</span>
+        然后打开 <span class="kbd">http://127.0.0.1:8899/room/a</span></p>
+    </div>
+  </div>
+
+<script>
+const invoke = (cmd, args) => window.__TAURI__.core.invoke(cmd, args);
+const $ = (id) => document.getElementById(id);
+const chromeH = () => $("chrome").offsetHeight;
+
+let tabs = [];
+let seq = 0;
+let active = null;
+let busy = false;
+let renderedKey = "";
+let errTimer = 0;
+let addrDirty = false;
+
+function activeTab() { return tabs.find((t) => t.label === active) || null; }
+
+function setErr(msg) {
+  const el = $("err");
+  el.textContent = msg || "";
+  clearTimeout(errTimer);
+  if (msg) errTimer = setTimeout(() => { el.textContent = ""; }, 9000);
+}
+
+function hostOf(url) {
+  try {
+    const u = new URL(url);
+    return u.host + (u.pathname === "/" ? "" : u.pathname);
+  } catch (e) {
+    return url;
+  }
+}
+
+const TOOL_TITLES = {
+  "/rooms": "收听",
+  "/library": "文件中心",
+  "/people": "人物",
+  "/reader": "阅读",
+  "/highlights": "高光榜",
+};
+function toolTitle(url) {
+  try {
+    const u = new URL(url);
+    return TOOL_TITLES[u.pathname.replace(/\/$/, "")] || hostOf(url);
+  } catch (e) {
+    return hostOf(url);
+  }
+}
+
+/* 支持直接粘整段分享文案：从里面抽第一个 http(s) 链接。 */
+function normalizeUrl(text) {
+  text = (text || "").trim();
+  if (!text) return "";
+  const m = text.match(/https?:\/\/[^\s"'<>]+/i);
+  if (m) return m[0].replace(/[，。；、)）]+$/, "");
+  if (/\s/.test(text)) return "";
+  if (/^(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(text)) return "http://" + text;
+  if (/^[\w.-]+(:\d+)?(\/|$)/.test(text)) return "https://" + text;
+  return "";
+}
+
+function renderTabs(force) {
+  const wrap = $("tabs");
+  const key = tabs.map((t) => t.label).join(",");
+  if (force || key !== renderedKey) {
+    wrap.querySelectorAll(".tab").forEach((el) => el.remove());
+    for (const t of tabs) {
+      const el = document.createElement("div");
+      el.className = "tab";
+      el.dataset.label = t.label;
+      el.innerHTML =
+        '<span class="dot"></span><span class="tname"></span>' +
+        '<span class="tclose" title="关闭">×</span>';
+      el.querySelector(".tname").textContent = t.title || hostOf(t.url);
+      el.querySelector(".tname").title = t.url;
+      wrap.appendChild(el);
+    }
+    renderedKey = key;
+  }
+  for (const t of tabs) {
+    const el = wrap.querySelector('[data-label="' + t.label + '"]');
+    if (!el) continue;
+    el.classList.toggle("active", t.label === active);
+    const dot = el.querySelector(".dot");
+    dot.className = "dot " + (t.tool ? "tool" : (t.stopped ? "off" : (t.chunks > 0 ? "ok" : "wait")));
+    const name = el.querySelector(".tname");
+    const title = t.title || hostOf(t.url);
+    if (name.textContent !== title) name.textContent = title;
+    name.title = t.url;
+  }
+  $("empty").style.display = tabs.length ? "none" : "";
+  $("addr").placeholder = tabs.length
+    ? "输入新链接，回车在新标签页打开"
+    : "粘贴直播间链接，回车打开";
+}
+
+function renderStatus() {
+  const t = activeTab();
+  for (const id of ["btnBack", "btnFwd", "btnReload", "btnMute", "btnLive", "btnStop"]) {
+    $(id).disabled = !t;
+  }
+  $("btnLive").disabled = !t || !!t.tool;
+  $("btnStop").textContent = t && t.tool ? "✕ 关闭标签页" : "■ 停止并关闭";
+  $("btnMute").textContent = t && t.muted ? "🔇 取消静音" : "🔊 静音";
+  if (!t) {
+    $("stat").textContent = tabs.length ? "选择一个标签页" : "粘贴直播间链接开始";
+    return;
+  }
+  if (t.tool) {
+    $("stat").textContent = "工具页 · " + (t.title || hostOf(t.url));
+    return;
+  }
+  const last = t.lastMs == null ? "—" : (t.lastMs / 1000).toFixed(1) + "s";
+  const phase = t.stopped ? "采集已停止" : (t.chunks ? "采集中" : "等待页面播放");
+  $("stat").textContent =
+    phase + " · " + t.chunks + " 块 · 最近 " + last + " · 字幕 " + t.n + " 条" +
+    (t.lastText ? " · " + t.lastText : "");
+}
+
+async function syncVisibility() {
+  const w = window.innerWidth;
+  const h = Math.max(1, window.innerHeight - chromeH());
+  for (const t of tabs) {
+    const on = t.label === active;
+    try {
+      if (on) {
+        await invoke("room_layout", { label: t.label, x: 0, y: chromeH(), w, h });
+        await invoke("room_show", { label: t.label, visible: true });
+        await invoke("room_focus", { label: t.label });
+      } else {
+        await invoke("room_show", { label: t.label, visible: false });
+      }
+    } catch (e) {
+      /* 视图可能已经被关闭；下一次操作会重新同步 */
+    }
+  }
+}
+
+async function activateTab(label) {
+  const t = tabs.find((x) => x.label === label);
+  if (!t) return;
+  active = label;
+  addrDirty = false;
+  $("addr").value = t.url;
+  await syncVisibility();
+  renderTabs();
+  renderStatus();
+}
+
+async function openTab(raw, opts) {
+  const url = normalizeUrl(raw);
+  if (!url) {
+    setErr("请输入 http(s) 直播间链接");
+    return;
+  }
+  if (busy) return;
+  const capture = !opts || opts.capture !== false;
+  const room = (opts && opts.room) || "";
+  busy = true;
+  let sid = (opts && opts.sid) || "";
+  try {
+    const label = "room-" + (++seq);
+    const title = capture ? hostOf(url) : toolTitle(url);
+    // 壳接住飞书/收听页的房间时会先把会话建好，这里直接用，别再建一个。
+    if (capture && !sid) sid = await invoke("live_start", { title: "内嵌浏览器 " + title });
+    await invoke("room_open", {
+      label, url, sid, capture, room,
+      x: 0, y: chromeH(), w: window.innerWidth,
+      h: Math.max(1, window.innerHeight - chromeH()),
+    });
+    tabs.push({
+      label, url, sid, room, title, tool: !capture,
+      muted: false, chunks: 0, lastMs: null, n: 0, lastText: "",
+      stopped: !capture, running: capture, reportedLive: false,
+    });
+    active = label;
+    await syncVisibility();
+    renderTabs(true);
+    renderStatus();
+    addrDirty = false;
+    $("addr").value = "";
+    setErr("");
+  } catch (e) {
+    if (sid) {
+      try { await invoke("live_stop", { sid }); } catch (_) {}
+    }
+    setErr("打开失败：" + String(e));
+  } finally {
+    busy = false;
+  }
+}
+
+async function closeTab(label) {
+  const t = tabs.find((x) => x.label === label);
+  if (!t) return;
+  tabs = tabs.filter((x) => x.label !== label);
+  if (active === label) active = tabs.length ? tabs[tabs.length - 1].label : null;
+  try { await invoke("room_close", { label }); } catch (_) {}
+  // 手动关标签页 = 停止这一路：把引擎房间也落到 stopped，飞书里不会还显示「监听中」。
+  if (t.room) {
+    try { await invoke("room_close_room", { room: t.room }); } catch (_) {}
+  }
+  if (!t.tool && !t.stopped) {
+    try { await invoke("live_stop", { sid: t.sid }); } catch (_) {}
+  }
+  await syncVisibility();
+  renderTabs(true);
+  renderStatus();
+}
+
+async function toggleMute() {
+  const t = activeTab();
+  if (!t) return;
+  t.muted = !t.muted;
+  try {
+    await invoke("room_mute", { label: t.label, muted: t.muted });
+    $("btnMute").textContent = t.muted ? "🔇 取消静音" : "🔊 静音";
+  } catch (e) {
+    setErr("静音失败：" + String(e));
+  }
+}
+
+async function nav(kind) {
+  const t = activeTab();
+  if (!t) return;
+  try {
+    if (kind === "reload") await invoke("room_reload", { label: t.label });
+    else await invoke("room_history", { label: t.label, delta: kind === "back" ? -1 : 1 });
+  } catch (e) {
+    setErr(String(e));
+  }
+}
+
+async function openLive() {
+  const t = activeTab();
+  if (!t) return;
+  try { await invoke("live_open_view", { sid: t.sid }); }
+  catch (e) { setErr("打开实时字幕失败：" + String(e)); }
+}
+
+async function stopAndClose() {
+  const t = activeTab();
+  if (!t) return;
+  await closeTab(t.label);
+}
+
+async function poll() {
+  try {
+    const stats = await invoke("room_stats");
+    const by = new Map(stats.map((s) => [s.room, s]));
+    for (const t of tabs) {
+      const s = by.get(t.label);
+      if (s) {
+        t.chunks = s.chunks;
+        t.lastMs = s.last_ms_ago;
+      }
+    }
+    // 第一块音频到了才向引擎报 live：飞书那边「开好了我喊你」不会提前喊。
+    for (const tab of tabs) {
+      if (tab.room && tab.chunks > 0 && !tab.reportedLive) {
+        tab.reportedLive = true;
+        try {
+          await invoke("room_report", { room: tab.room, sid: tab.sid, status: "live" });
+        } catch (_) {}
+      }
+    }
+    const t = activeTab();
+    if (t) {
+      if (!t.tool) {
+        try {
+          const d = await invoke("live_probe", { sid: t.sid });
+          const st = d.status || {};
+          if (st.n_utterances != null) t.n = st.n_utterances;
+          if (st.running != null) t.running = !!st.running;
+          const rows = (d.utterances && d.utterances.rows) || [];
+          if (rows.length) t.lastText = rows[rows.length - 1].text || t.lastText;
+        } catch (_) {}
+      }
+      try {
+        const u = await invoke("room_url", { label: t.label });
+        if (u) {
+          t.url = u;
+          t.title = t.tool ? toolTitle(u) : hostOf(u);
+          if (!addrDirty && document.activeElement !== $("addr")) $("addr").value = u;
+        }
+      } catch (_) {}
+    }
+  } catch (_) {}
+  renderTabs();
+  renderStatus();
+  setTimeout(poll, 1500);
+}
+
+/* 主窗口的 window.open 由壳入队；这里取走后按工具页打开（不建采集会话）。 */
+async function pollPending() {
+  try {
+    const items = await invoke("browser_take_pending");
+    for (const it of items || []) {
+      if (!it) continue;
+      if (it.action === "close" && it.room) {
+        const t = tabs.find((x) => x.room === it.room);
+        if (t) await closeTab(t.label);
+        continue;
+      }
+      if (it.url) {
+        await openTab(it.url, {
+          capture: !!it.capture,
+          sid: it.sid || "",
+          room: it.room || "",
+        });
+      }
+    }
+  } catch (_) {}
+  setTimeout(pollPending, 500);
+}
+
+/* ---------------- 事件 ---------------- */
+$("tabs").addEventListener("click", async (e) => {
+  const tab = e.target.closest(".tab");
+  if (!tab) return;
+  if (e.target.closest(".tclose")) {
+    e.stopPropagation();
+    await closeTab(tab.dataset.label);
+    return;
+  }
+  await activateTab(tab.dataset.label);
+});
+$("btnNew").onclick = () => { $("addr").focus(); $("addr").select(); };
+$("btnOpen").onclick = () => openTab($("addr").value);
+$("addr").addEventListener("input", () => { addrDirty = true; });
+$("addr").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); openTab($("addr").value); }
+  if (e.key === "Escape") {
+    addrDirty = false;
+    $("addr").value = activeTab() ? activeTab().url : "";
+  }
+});
+$("btnBack").onclick = () => nav("back");
+$("btnFwd").onclick = () => nav("fwd");
+$("btnReload").onclick = () => nav("reload");
+$("btnMute").onclick = toggleMute;
+$("btnLive").onclick = openLive;
+$("btnStop").onclick = stopAndClose;
+
+let resizeTimer = 0;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { syncVisibility(); }, 120);
+});
+
+/* 自动化入口：LIVENOTES_SPIKE=browser 用它走和用户一样的 openTab 路径。 */
+window.__LN_TEST_OPEN = (url) => openTab(url);
+window.__LN_TEST_OPEN_LIVE = () => openLive();
+window.__LN_TEST_STATE = () => ({
+  active,
+  tabs: tabs.map((t) => ({
+    label: t.label, url: t.url, sid: t.sid, room: t.room || "",
+    chunks: t.chunks, n: t.n, tool: !!t.tool,
+  })),
+});
+
+renderTabs(true);
+renderStatus();
+setTimeout(poll, 800);
+setTimeout(pollPending, 200);
+</script>
+</body>
+</html>

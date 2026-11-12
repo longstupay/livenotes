@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LiveNotes · M1 本地壳</title>
+<style>
+  :root{--bg:#0A0C0F;--surface:#12161B;--line:#222A33;--ink:#E4DFD4;--muted:#8A94A3;
+    --accent:#E6B566;--jade:#7FD1AE;--red:#E8776D}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"Microsoft YaHei",system-ui,sans-serif}
+  header{height:56px;display:flex;align-items:center;gap:14px;padding:0 18px;
+    background:var(--surface);border-bottom:1px solid var(--line);position:relative;z-index:2}
+  .brand{font-weight:700;letter-spacing:.04em}
+  .tag{font-size:11px;color:#0A0C0F;background:var(--accent);border-radius:4px;
+    padding:2px 7px;font-weight:700}
+  .meta{margin-left:auto;font:12px/1.4 Consolas,monospace;color:var(--muted);
+    max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--jade);
+    box-shadow:0 0 10px var(--jade)}
+  iframe{position:absolute;left:0;right:0;top:56px;bottom:0;width:100%;height:calc(100% - 56px);
+    border:0;background:#fff}
+  .strip{position:absolute;left:0;right:0;top:56px;height:0;z-index:3}
+  .note{position:absolute;left:14px;top:68px;z-index:4;font:12px/1.6 Consolas,monospace;
+    color:#0A0C0F;background:var(--accent);padding:6px 10px;border-radius:5px;
+    box-shadow:0 6px 24px rgba(0,0,0,.35)}
+</style>
+</head>
+<body>
+  <header>
+    <span class="dot" id="dot"></span>
+    <span class="brand">LiveNotes</span>
+    <span class="tag">M1 LOCAL SHELL</span>
+    <span id="status" style="font-size:12px;color:var(--muted)">本地壳已加载 · 引擎页在 iframe 里</span>
+    <span class="meta" id="meta"></span>
+  </header>
+  <div class="note">原生子视图应出现在这块 iframe 之上；命令面板/浮层必须先 hide() 舞台</div>
+  <iframe id="engineFrame" title="LiveNotes 引擎页"></iframe>
+<script>
+  const inv = (cmd, args) => window.__TAURI__.core.invoke(cmd, args);
+  const engine = window.__LN_ENGINE__ || "http://127.0.0.1:1/";
+  const frame = document.getElementById("engineFrame");
+  const meta = document.getElementById("meta");
+  const status = document.getElementById("status");
+  meta.textContent = location.origin + "  ->  " + engine;
+
+  function report(tag, detail) {
+    inv("spike_report", { tag: tag, detail: JSON.stringify(detail) }).catch((e) => {
+      console.error("spike_report failed", e);
+    });
+  }
+
+  report("m1local-ipc", { origin: location.origin, engine: engine });
+  frame.src = engine;
+  frame.addEventListener("load", () => {
+    status.textContent = "iframe 已加载引擎页 · 等原生子视图";
+    report("m1local-iframe-load", { engine: engine });
+  });
+
+  // 走和正式壳一样的命令：本地页直接 invoke，不需要 remote capability。
+  setTimeout(async () => {
+    try {
+      await inv("room_open", {
+        label: "m1-stage",
+        url: engine.replace(/\/$/, "") + "/static/spike-stage.html",
+        sid: "", capture: false,
+        x: 380, y: 180, w: 640, h: 420
+      });
+      status.textContent = "原生子视图已打开 · 640×420";
+      report("m1local-child-open", { ok: true });
+    } catch (e) {
+      status.textContent = "子视图打开失败：" + String(e);
+      report("m1local-child-open", { err: String(e) });
+    }
+  }, 3000);
+
+  setTimeout(async () => {
+    try {
+      await inv("room_show", { label: "m1-stage", visible: false });
+      status.textContent = "子视图已 hide · 浮层应完整可见";
+      report("m1local-child-hidden", { ok: true });
+    } catch (e) {
+      report("m1local-child-hidden", { err: String(e) });
+    }
+  }, 16000);
+
+  setTimeout(async () => {
+    try {
+      await inv("room_show", { label: "m1-stage", visible: true });
+      status.textContent = "子视图已 show · 再次盖住 iframe";
+      report("m1local-child-shown", { ok: true });
+    } catch (e) {
+      report("m1local-child-shown", { err: String(e) });
+    }
+  }, 26000);
+</script>
+</body>
+</html>

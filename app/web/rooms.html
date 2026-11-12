@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>收听 · 直播语记</title>
+<link rel="stylesheet" href="/static/css/rooms.css">
+</head>
+<body>
+<script src="/static/js/embed.js"></script>
+
+<header class="top" data-ln-region="topbar">
+  <a class="brand" href="/">直播语记</a>
+  <nav class="nav" aria-label="主导航">
+    <a class="navlink" href="/">工作台</a>
+    <a class="navlink on" href="/rooms" aria-current="page">收听</a>
+    <a class="navlink" href="/live">实时字幕</a>
+    <a class="navlink" href="/highlights">高光榜</a>
+    <a class="navlink" href="/metrics">指标</a>
+  </nav>
+  <span class="grow"></span>
+  <span class="sum" id="topSum">—</span>
+  <span class="conn" id="conn"><i></i><span>本地服务</span></span>
+</header>
+
+<main class="wrap" data-ln-region="stage">
+  <h1>收听</h1>
+  <div class="sub">把直播间链接粘进来就开始录。房间名从页面里自动读出来，不用填；同一个链接不会重复添加。</div>
+
+  <div class="form">
+    <input id="urlInput" placeholder="https://live.douyin.com/123456789　（抖音分享出来的短链也行）" autocomplete="off">
+    <button id="addBtn">开始听</button>
+  </div>
+  <div class="tip">支持抖音 / 快手 / B 站等网页直播间 · 最多同时 5 路 · 首次遇到陌生网站会要你确认一次</div>
+
+  <div id="notices"></div>
+
+  <div class="toolbar">
+    <div class="seg" id="viewSeg" role="group" aria-label="视图">
+      <button data-view="wall" class="on">监控墙</button>
+      <button data-view="list">列表</button>
+    </div>
+    <div class="filters" id="filters" role="group" aria-label="筛选"></div>
+    <span class="spacer"></span>
+    <label class="search" aria-label="搜索直播间">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+      <input id="search" type="search" placeholder="搜索直播间" autocomplete="off">
+    </label>
+    <button class="btn diag-btn" id="diagBtn">启动诊断 <span class="count" id="diagCount" hidden>0</span></button>
+  </div>
+
+  <section class="wall" id="wall" aria-label="监控墙"></section>
+  <section class="list" id="listView" aria-label="房间列表" hidden></section>
+
+  <div class="foot">
+    <div><b>关掉这个页面不影响录音</b>——采集在每路专属的浏览器里跑，噪音也已经被独立静音。</div>
+    <div><b>某一路断了</b>：这里会写明原因（下播 / 需要登录 / 没声音），修好后点「重试」。</div>
+    <div data-ln-copy="rooms.foot-hint"><b>临时抓一个标签页</b>：回到 <a href="/">工作台</a> 点「● 实时监听」，适合只听一场会议。</div>
+    <div><span class="kbd">Esc</span> 返回 · <span class="kbd">←</span><span class="kbd">→</span> 切换房间 · <span class="kbd">/</span> 搜索</div>
+  </div>
+</main>
+
+<div class="overlay" id="detailOverlay" hidden></div>
+<div class="overlay" id="diagOverlay" hidden></div>
+<div class="overlay center" id="modalOverlay" hidden></div>
+<div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+
+<script src="/static/js/live-audio.js"></script>
+<script type="module" src="/static/js/rooms/main.js"></script>
+</body>
+</html>

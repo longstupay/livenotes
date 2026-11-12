@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>文件中心 · 直播语记</title>
+<style>
+:root{--ink:#1d2330;--muted:#6b7480;--faint:#9aa3b0;--line:#e6e9ef;--accent:#2b5cff;
+  --bg:#f4f6f9;--danger:#c0392b;--ok:#0a7a4a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+.top{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:10px;padding:10px 18px;
+  background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top .brand{font-weight:700;font-size:13px}
+.top a{font-size:12.5px;color:var(--muted);text-decoration:none;padding:4px 8px;border-radius:7px}
+.top a:hover{background:#eef1f7;color:var(--ink)}
+.grow{flex:1}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 18px 80px}
+h1{font-size:20px;margin:0 0 4px}
+.sub{font-size:12.5px;color:var(--muted);margin-bottom:16px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.card b{display:block;font-size:19px;font-variant-numeric:tabular-nums}
+.card span{font-size:11.5px;color:var(--muted)}
+.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.tabs{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
+.tabs button{border:0;background:#fff;padding:7px 14px;font-size:12.5px;cursor:pointer;color:#4a5464;
+  border-right:1px solid var(--line)}
+.tabs button:last-child{border-right:0}
+.tabs button.on{background:#eef3ff;color:var(--accent);font-weight:600}
+input[type=text],input[type=search]{font:inherit;font-size:12.5px;padding:7px 10px;border:1px solid var(--line);
+  border-radius:8px;outline:none;background:#fff}
+input:focus{border-color:var(--accent)}
+button.act{font:inherit;font-size:11.5px;padding:4px 9px;border:1px solid var(--line);border-radius:7px;
+  background:#fff;color:#4a5464;cursor:pointer}
+button.act:hover{border-color:var(--accent);color:var(--accent)}
+button.act.danger:hover{border-color:var(--danger);color:var(--danger)}
+.bulk{display:none;align-items:center;gap:8px;padding:8px 12px;background:#eef3ff;border:1px solid #c3d3ff;
+  border-radius:9px;font-size:12px;color:#1d3ea8;margin-bottom:10px}
+.bulk.show{display:flex}
+.bulk.undo{display:none;background:#fff8e6;border-color:#f0d69a;color:#7a4b00}
+.bulk.undo.show{display:flex}
+.reason{display:inline-block;font-size:11px;padding:2px 7px;border-radius:999px;margin:1px 4px 1px 0;
+  background:#fdeceb;color:#b3261e;border:1px solid #f6cfcb;white-space:nowrap}
+.reason.demo{background:#eef3ff;color:#1d3ea8;border-color:#c3d3ff}
+.reason.empty{background:#fff4d6;color:#8a5a00;border-color:#f0d69a}
+.reason.dup{background:#f3f0ff;color:#5b3ea8;border-color:#ddd3ff}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:10px;
+  overflow:hidden;font-size:12.5px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid #f1f3f7;vertical-align:middle}
+th{font-size:11.5px;color:var(--muted);font-weight:600;background:#fafbfc;cursor:pointer;user-select:none}
+tr:last-child td{border-bottom:0}
+tr:hover td{background:#fafbff}
+td.t{font-weight:600;cursor:pointer}
+td.t:hover{color:var(--accent)}
+.num{font-variant-numeric:tabular-nums;color:var(--muted)}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;background:#c9d0da}
+.dot.has{background:var(--ok)}
+.acts{display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap}
+.empty{padding:50px 0;text-align:center;color:var(--faint);font-size:13px}
+.toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);background:#1d2330;color:#fff;
+  padding:8px 16px;border-radius:8px;font-size:12.5px;z-index:99;display:none}
+.toast.show{display:block}
+@media(max-width:820px){.cards{grid-template-columns:repeat(2,1fr)}}
+/* 手机：表格转卡片 */
+@media(max-width:760px){
+  .top{padding:9px 12px;gap:8px}
+  .top .brand{white-space:nowrap;font-size:12.5px}
+  .wrap{padding:16px 12px 60px}
+  h1{font-size:18px}
+  .toolbar{gap:8px}
+  .toolbar input[type=search]{width:100%!important;flex:1 1 100%;font-size:16px;min-height:40px}
+  .tabs button{padding:8px 16px;min-height:40px}
+  table,tbody,tr,td{display:block;width:100%}
+  thead{display:none}
+  table{border:0;background:transparent;font-size:13px}
+  tbody tr{position:relative;background:#fff;border:1px solid var(--line);border-radius:12px;
+    padding:11px 12px 11px 40px;margin-bottom:9px;box-shadow:0 1px 2px rgba(20,30,60,.04)}
+  tbody tr:hover td{background:transparent}
+  tbody td{border:0;padding:0;background:transparent!important}
+  td:first-child{position:absolute;left:12px;top:13px}
+  td:first-child input{width:18px;height:18px;accent-color:var(--accent)}
+  td.t{font-size:14.5px;line-height:1.45;margin-bottom:5px}
+  td.num{display:inline-block;width:auto;margin:0 10px 4px 0;font-size:11.5px}
+  td:last-child{margin-top:6px}
+  .acts{justify-content:flex-start;gap:6px}
+  .acts .act{min-height:34px;padding:6px 11px;font-size:12px}
+  .bulk{flex-wrap:wrap;gap:6px;font-size:12px;padding:9px 10px}
+  .bulk .act{min-height:32px}
+}
+</style>
+</head>
+<body>
+<script src="/static/js/embed.js"></script>
+<div class="top" data-ln-region="topbar">
+  <span class="brand">直播语记 · 文件中心</span>
+  <a href="/">← 返回主页</a>
+  <span class="grow"></span>
+  <a href="/reader?session=" id="lnkReader" style="display:none"></a>
+</div>
+
+<div class="wrap" data-ln-region="stage">
+  <h1>录音文件中心</h1>
+  <div class="sub" id="sub">加载中…</div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="toolbar">
+    <div class="tabs" id="tabs">
+      <button data-v="live" class="on">全部场次</button>
+      <button data-v="trash">回收站</button>
+      <button data-v="cleanup">体检清理</button>
+    </div>
+    <input type="search" id="q" placeholder="按标题 / 日期筛选…" style="width:240px">
+    <span class="grow"></span>
+    <button class="act" id="refresh">刷新</button>
+  </div>
+
+  <div class="bulk" id="bulk">
+    <span id="bulkText"></span>
+    <span class="grow"></span>
+    <button class="act" id="bulkTrash">删除所选</button>
+    <button class="act" id="bulkAudio">只删所选录音</button>
+    <button class="act" id="bulkRestore">还原所选</button>
+    <button class="act danger" id="bulkPurge">彻底删除</button>
+    <button class="act" id="bulkClear">取消</button>
+  </div>
+
+  <div class="bulk undo" id="undoBar">
+    <span id="undoText"></span>
+    <span class="grow"></span>
+    <button class="act" id="undoBtn">撤销</button>
+    <button class="act" id="undoClose">关闭</button>
+  </div>
+
+  <table>
+    <thead><tr id="head"></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div class="empty" id="empty" style="display:none">没有数据</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var _tabQ='';
+try{_tabQ=new URLSearchParams(location.search).get('tab')||''}catch(e){}
+var S={tab:(['live','trash','cleanup'].indexOf(_tabQ)>=0?_tabQ:'live'),q:'',rows:[],stats:{},
+  counts:{},sort:'date',desc:true,sel:{},lastTrashed:[]};
+var $=function(s){return document.querySelector(s)};
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function fmtDur(t){t=Math.max(0,Math.round(t||0));var h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60;
+  var p=function(n){return (n<10?'0':'')+n};
+  return (h?h+':':'')+p(m)+':'+p(s)}
+function fmtSize(b){
+  if(!b)return '—';
+  if(b<1048576)return Math.round(b/1024)+' KB';
+  if(b<1073741824)return (b/1048576).toFixed(1)+' MB';
+  return (b/1073741824).toFixed(2)+' GB';
+}
+function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show')},2400)}
+
+function api(p,opt){return fetch(p,opt).then(function(r){return r.json()})}
+function post(p,body){return fetch(p,{method:'POST',headers:{'Content-Type':'application/json'},
+  body:JSON.stringify(body)}).then(function(r){return r.json()})}
+
+function renderCards(){
+  var s=S.stats;
+  if(S.tab==='cleanup'){
+    var c=S.counts||{};
+    var bytes=S.rows.reduce(function(a,r){return a+(r.audio_bytes||0)},0);
+    $('#cards').innerHTML=
+      '<div class="card"><b>'+(c.total||0)+'</b><span>待清理候选</span></div>'+
+      '<div class="card"><b>'+(c.demo||0)+'</b><span>演示数据</span></div>'+
+      '<div class="card"><b>'+(c.empty||0)+'</b><span>空采集</span></div>'+
+      '<div class="card"><b>'+(c.duplicate||0)+'</b><span>重复场次</span></div>';
+    $('#sub').textContent='候选共 '+(c.total||0)+' 场，可回收 '+fmtSize(bytes)+
+      '。默认全部勾选，先预览再点「移到回收站」；删错了可以撤销。';
+    return;
+  }
+  $('#cards').innerHTML=
+    '<div class="card"><b>'+s.sessions+'</b><span>个场次</span></div>'+
+    '<div class="card"><b>'+fmtDur(s.total_seconds)+'</b><span>录音总时长</span></div>'+
+    '<div class="card"><b>'+fmtSize(s.audio_bytes)+'</b><span>音频占用 · '+s.audio_sessions+' 场有录音</span></div>'+
+    '<div class="card"><b>'+(s.trash||0)+'</b><span>回收站</span></div>';
+  $('#sub').textContent='共 '+s.utterances+' 条发言。删除会先进回收站，音频一起移走；「只删录音」保留全部文字。';
+}
+
+function visibleRows(){
+  var q=S.q.trim().toLowerCase();
+  var rows=S.rows.filter(function(r){
+    if(!q)return true;
+    return String(r.title||'').toLowerCase().indexOf(q)>=0 || String(r.started_at||'').indexOf(q)>=0;
+  });
+  var key=S.sort;
+  rows.sort(function(a,b){
+    var va,vb;
+    if(key==='dur'){va=a.duration_s||0;vb=b.duration_s||0}
+    else if(key==='size'){va=a.audio_bytes||0;vb=b.audio_bytes||0}
+    else if(key==='n'){va=a.n_utterances||0;vb=b.n_utterances||0}
+    else{va=a.started_at||'';vb=b.started_at||''}
+    return (va>vb?1:va<vb?-1:0)*(S.desc?-1:1);
+  });
+  return rows;
+}
+
+function renderHead(){
+  if(S.tab==='cleanup'){
+    $('#head').innerHTML='<th><input type="checkbox" id="selAll"></th><th>原因</th><th>标题</th>'
+      +'<th>日期</th><th>时长</th><th>条数</th><th>录音</th>';
+    var all=$('#selAll');
+    if(all)all.onchange=function(){
+      var on=all.checked;
+      visibleRows().forEach(function(r){ if(on)S.sel[r.id]=1;else delete S.sel[r.id] });
+      renderRows();renderBulk();
+    };
+    return;
+  }
+  var cols=[['',''],['t','标题'],['date','日期'],['dur','时长'],['n','条数'],['size','录音'],['','操作']];
+  $('#head').innerHTML=cols.map(function(c){
+    if(!c[0])return '<th>'+c[1]+'</th>';
+    var arrow=(S.sort===c[0])?(S.desc?' ↓':' ↑'):'';
+    return '<th data-k="'+c[0]+'">'+c[1]+arrow+'</th>';
+  }).join('');
+  Array.prototype.forEach.call($('#head').querySelectorAll('th[data-k]'),function(th){
+    th.onclick=function(){
+      var k=th.dataset.k;
+      if(S.sort===k)S.desc=!S.desc;else{S.sort=k;S.desc=true}
+      render();
+    };
+  });
+}
+
+function renderRows(){
+  var rows=visibleRows();
+  if(S.tab==='cleanup'){
+    $('#rows').innerHTML=rows.map(function(r){
+      var reasons=(r.cleanup_reasons||[]).map(function(txt,i){
+        var kind=(r.cleanup_kinds||[])[i]||'';
+        return '<span class="reason '+esc(kind)+'">'+esc(txt)+'</span>';
+      }).join('');
+      return '<tr>'
+        +'<td><input type="checkbox" data-sel="'+esc(r.id)+'"'+(S.sel[r.id]?' checked':'')+'></td>'
+        +'<td>'+reasons+'</td>'
+        +'<td class="t" data-a="read" data-id="'+esc(r.id)+'">'+esc(r.title)+'</td>'
+        +'<td class="num">'+esc((r.started_at||'').slice(0,16).replace('T',' '))+'</td>'
+        +'<td class="num">'+fmtDur(r.duration_s)+'</td>'
+        +'<td class="num">'+(r.n_utterances||0)+'</td>'
+        +'<td class="num">'+(r.audio_bytes?fmtSize(r.audio_bytes):'—')+'</td></tr>';
+    }).join('');
+    $('#empty').style.display=rows.length?'none':'block';
+    $('#empty').textContent=rows.length?'':'没有需要清理的场次，库很干净';
+    Array.prototype.forEach.call($('#rows').querySelectorAll('[data-a]'),function(el){
+      el.onclick=function(e){e.stopPropagation();action(el.dataset.a,el.dataset.id)};
+    });
+    Array.prototype.forEach.call($('#rows').querySelectorAll('[data-sel]'),function(el){
+      el.onchange=function(){
+        if(el.checked)S.sel[el.dataset.sel]=1;else delete S.sel[el.dataset.sel];
+        renderBulk();
+      };
+    });
+    renderBulk();
+    return;
+  }
+  var trash=S.tab==='trash';
+  $('#rows').innerHTML=rows.map(function(r){
+    var acts=trash
+      ? '<button class="act" data-a="restore" data-id="'+esc(r.id)+'">还原</button>'+
+        '<button class="act danger" data-a="purge" data-id="'+esc(r.id)+'">彻底删除</button>'
+      : '<button class="act" data-a="read" data-id="'+esc(r.id)+'">阅读</button>'+
+        '<button class="act" data-a="play" data-id="'+esc(r.id)+'">播放</button>'+
+        (r.has_audio?'<button class="act" data-a="download" data-id="'+esc(r.id)+'">下载</button>':'')+
+        '<button class="act" data-a="rename" data-id="'+esc(r.id)+'">改名</button>'+
+        (r.has_audio?'<button class="act" data-a="audio" data-id="'+esc(r.id)+'">只删录音</button>':'')+
+        '<button class="act danger" data-a="trash" data-id="'+esc(r.id)+'">删除</button>';
+    return '<tr>'
+      +'<td><input type="checkbox" data-sel="'+esc(r.id)+'"'+(S.sel[r.id]?' checked':'')+'></td>'
+      +'<td class="t" data-a="read" data-id="'+esc(r.id)+'">'+esc(r.title)+'</td>'
+      +'<td class="num">'+esc((r.started_at||'').slice(0,16).replace('T',' '))+'</td>'
+      +'<td class="num">'+fmtDur(r.duration_s)+'</td>'
+      +'<td class="num">'+(r.n_utterances||0)+'</td>'
+      +'<td class="num">'+(r.has_audio?'<span class="dot has"></span>'+fmtSize(r.audio_bytes):'<span class="dot"></span>无')+'</td>'
+      +'<td><div class="acts">'+acts+'</div></td></tr>';
+  }).join('');
+  $('#empty').style.display=rows.length?'none':'block';
+  $('#empty').textContent='没有数据';
+
+  Array.prototype.forEach.call($('#rows').querySelectorAll('[data-a]'),function(el){
+    el.onclick=function(e){
+      e.stopPropagation();
+      action(el.dataset.a,el.dataset.id);
+    };
+  });
+  Array.prototype.forEach.call($('#rows').querySelectorAll('[data-sel]'),function(el){
+    el.onchange=function(){
+      if(el.checked)S.sel[el.dataset.sel]=1;else delete S.sel[el.dataset.sel];
+      renderBulk();
+    };
+  });
+}
+
+function renderBulk(){
+  var n=Object.keys(S.sel).length;
+  $('#bulk').classList.toggle('show',n>0);
+  $('#bulkText').textContent='已选 '+n+' 项';
+  var trash=S.tab==='trash', cleanup=S.tab==='cleanup';
+  $('#bulkTrash').style.display=trash?'none':'';
+  $('#bulkTrash').textContent=cleanup?'移到回收站':'删除所选';
+  $('#bulkAudio').style.display=(trash||cleanup)?'none':'';
+  $('#bulkRestore').style.display=trash?'':'none';
+  $('#bulkPurge').style.display=trash?'':'none';
+}
+
+function render(){renderCards();renderHead();renderRows();renderBulk()}
+
+async function load(){
+  if(S.tab==='cleanup'){
+    var c=await api('/api/cleanup');
+    S.rows=c.sessions||[];S.stats=c.stats||{};S.counts=c.counts||{};
+    // 首次进来先把候选全部勾上，用户看到的就是「预览 + 一步确认」。
+    if(S._cleanupInit!==true){
+      S.sel={};
+      S.rows.forEach(function(r){S.sel[r.id]=1});
+      S._cleanupInit=true;
+    }
+    render();
+    return;
+  }
+  var d=await api(S.tab==='trash'?'/api/library/trash':'/api/library');
+  S.rows=d.sessions||[];S.stats=d.stats||{};
+  render();
+}
+
+async function action(a,id){
+  var row=S.rows.filter(function(r){return r.id===id})[0]||{};
+  try{
+    if(a==='read'){location.href='/reader?session='+encodeURIComponent(id);return}
+    if(a==='play'){location.href='/?session='+encodeURIComponent(id);return}
+    if(a==='download'){location.href='/api/audio?session_id='+encodeURIComponent(id)+'&download=1';return}
+    if(a==='rename'){
+      var t=prompt('新的标题',row.title||'');
+      if(t==null)return;
+      t=t.trim();if(!t)return;
+      await post('/api/sessions/rename',{session_id:id,title:t});
+      toast('已改名');await load();return;
+    }
+    if(a==='audio'){
+      if(!confirm('只删除这条录音（WAV），逐字稿和总结保留。\n\n'+(row.title||'')))return;
+      await post('/api/library/drop_audio',{session_id:id});
+      toast('录音已删除，文字还在');await load();return;
+    }
+    if(a==='trash'){
+      if(!confirm('把这一场移进回收站？音频会一起移走，可还原。\n\n'+(row.title||'')))return;
+      await post('/api/library/trash',{session_id:id});
+      toast('已移入回收站');await load();return;
+    }
+    if(a==='restore'){
+      await post('/api/library/restore',{session_id:id});
+      toast('已还原');await load();return;
+    }
+    if(a==='purge'){
+      if(!confirm('彻底删除，不可恢复（含逐字稿与音频）。\n\n'+(row.title||'')))return;
+      await post('/api/library/purge',{session_id:id});
+      toast('已彻底删除');await load();return;
+    }
+  }catch(e){toast('操作失败：'+e.message)}
+}
+
+async function bulkAction(kind){
+  var ids=Object.keys(S.sel);
+  if(!ids.length)return;
+  var label={trash:'移进回收站',audio:'只删录音',restore:'还原',purge:'彻底删除'}[kind];
+  if(kind==='purge'){
+    if(!confirm('彻底删除选中的 '+ids.length+' 场？不可恢复（含逐字稿与音频）。'))return;
+  }else if(!confirm('对选中的 '+ids.length+' 场执行「'+label+'」？'))return;
+  try{
+    var r=await post('/api/library/batch',{action:kind,session_ids:ids});
+    var done=(r.done||[]).length, skipped=(r.skipped||[]).length;
+    S.sel={};
+    if(kind==='trash'&&done){S.lastTrashed=r.done||[];showUndo(done)}
+    toast('已'+label+' '+done+' 场'+(skipped?('，跳过 '+skipped+' 场（正在录制或状态不符）'):''));
+    await load();
+  }catch(e){toast('操作失败：'+e.message)}
+}
+
+function showUndo(n){
+  if(!n)return;
+  $('#undoText').textContent='已移入回收站 '+n+' 场，逐字稿和音频都还在，可撤销';
+  $('#undoBar').classList.add('show');
+}
+function hideUndo(){$('#undoBar').classList.remove('show')}
+async function undoTrash(){
+  var ids=S.lastTrashed||[];
+  if(!ids.length){hideUndo();return}
+  try{
+    var r=await post('/api/library/batch',{action:'restore',session_ids:ids});
+    toast('已撤销，还原 '+(r.done||[]).length+' 场');
+    S.lastTrashed=[];hideUndo();await load();
+  }catch(e){toast('撤销失败：'+e.message)}
+}
+
+$('#tabs').onclick=function(e){
+  var b=e.target.closest('button');if(!b)return;
+  S.tab=b.dataset.v;S.sel={};
+  Array.prototype.forEach.call($('#tabs').querySelectorAll('button'),function(x){
+    x.classList.toggle('on',x.dataset.v===S.tab)});
+  load();
+};$('#q').oninput=function(e){S.q=e.target.value;render()};
+$('#refresh').onclick=load;
+$('#bulkClear').onclick=function(){S.sel={};render()};
+$('#bulkTrash').onclick=function(){bulkAction('trash')};
+$('#bulkAudio').onclick=function(){bulkAction('audio')};
+$('#bulkRestore').onclick=function(){bulkAction('restore')};
+$('#bulkPurge').onclick=function(){bulkAction('purge')};
+$('#undoBtn').onclick=undoTrash;
+$('#undoClose').onclick=hideUndo;
+
+// 带 ?tab=cleanup / ?tab=trash 进来时，tab 按钮和高亮要跟查询参数一致。
+(function(){
+  Array.prototype.forEach.call($('#tabs').querySelectorAll('button'),function(x){
+    x.classList.toggle('on',x.dataset.v===S.tab)});
+  if(S.tab==='cleanup'){
+    S._cleanupInit=false;
+  }
+})();
+
+load().catch(function(e){$('#sub').textContent='加载失败：'+e.message});
+</script>
+</body>
+</html>

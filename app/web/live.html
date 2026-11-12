@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>监听看板 · 直播语记</title>
+<style>
+:root{--ink:#1d2330;--muted:#6b7480;--faint:#9aa3b0;--line:#e6e9ef;--accent:#2b5cff;
+  --bg:#f4f6f9;--ok:#0a7a4a;--bad:#b3261e}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;
+  padding:10px 18px;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line)}
+.top .brand{font-weight:700;font-size:13px}
+.top .back{font-size:12.5px;color:var(--muted);text-decoration:none;padding:4px 8px;border-radius:7px}
+.top .back:hover{background:#eef1f7;color:var(--ink)}
+.grow{flex:1}
+.sum{font-size:12px;color:var(--muted)}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 18px 80px}
+h1{font-size:20px;margin:0 0 4px}
+.sub{font-size:12px;color:var(--muted);margin-bottom:16px}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);
+  border-radius:12px;overflow:hidden}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);font-size:12.5px;vertical-align:middle}
+th{background:#fafbfd;color:var(--muted);font-weight:600;font-size:11.5px}
+tr:last-child td{border-bottom:0}
+.ti{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.mono{font-variant-numeric:tabular-nums;color:var(--muted)}
+.last{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#4a5464}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:5px}
+.dot.idle{background:#c9a227}
+.dot.dead{background:var(--bad)}
+.bad{color:var(--bad)}
+.ok{color:var(--ok)}
+button{font:inherit;font-size:11.5px;padding:3px 9px;border-radius:7px;border:1px solid #dde2ea;
+  background:#fff;cursor:pointer;color:#4a5464;margin-right:6px}
+button:hover{border-color:var(--accent);color:var(--accent)}
+button.danger:hover{border-color:var(--bad);color:var(--bad)}
+.empty{padding:60px 0;text-align:center;color:var(--faint);font-size:13px;line-height:2;
+  background:#fff;border:1px dashed var(--line);border-radius:12px}
+.tip{margin-top:14px;font-size:11.5px;color:var(--muted);line-height:1.9}
+.focusbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px;
+  padding:9px 12px;border:1px solid #cfd9ff;background:#eef3ff;color:#2b3f6b;
+  border-radius:10px;font-size:12px;line-height:1.7}
+.focusbar.bad{border-color:#f0c9c4;background:#fff2f0;color:#8a2d24}
+.focusbar a{color:var(--accent);text-decoration:none;font-weight:600}
+.focusbar .spacer{flex:1}
+tr.focus td{background:#f4f7ff}
+/* 手机上不铺 10 列表格：一行一路的卡片，重要信息在首屏，按钮够大拇指点 */
+.cards{display:flex;flex-direction:column;gap:10px}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.card.focus{border-color:#c9d6ff;box-shadow:0 0 0 1px #c9d6ff inset}
+.card-top{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;min-width:0}
+.card-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card-state{flex:0 0 auto;font-weight:400;font-size:12px;color:var(--muted)}
+.card-meta{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:7px;color:var(--muted);font-size:11.5px}
+.card-line{margin-top:8px;font-size:12.5px;line-height:1.65;color:#4a5464;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.card-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.card-btns button{margin:0;padding:6px 12px;font-size:12px}
+.card-btns button.primary{border-color:var(--accent);color:var(--accent);font-weight:600}
+@media(max-width:720px){
+  .wrap{padding:14px 12px 90px}
+  h1{font-size:17px}
+  .sub{font-size:11.5px;margin-bottom:12px}
+  .top{padding:8px 10px;gap:4px}
+  .top .brand{display:none}
+  .top .back{padding:4px 6px;font-size:12px}
+  .focusbar{padding:8px 10px;font-size:11.5px;margin-bottom:10px}
+}
+</style>
+</head>
+<body>
+<script src="/static/js/embed.js"></script>
+<div class="top" data-ln-region="topbar">
+  <span class="brand">直播语记</span>
+  <a class="back" href="/">工作台</a>
+  <a class="back" href="/rooms">收听</a>
+  <a class="back on" href="/live">实时字幕</a>
+  <span class="grow"></span>
+  <span class="sum" id="sum">—</span>
+</div>
+<div class="wrap" data-ln-region="stage">
+  <h1>正在监听</h1>
+  <div class="sub">这里能看到每一路的实时状态。<b>静默</b>看的是最后一句人声；<b>断流</b>要看最近一块音频有没有在送。</div>
+  <div id="focusbar"></div>
+  <div id="list"></div>
+  <div class="tip">
+    采集在每路专属的浏览器里跑，关掉这个页面不影响录制。<br>
+    某一路断了：回<a href="/rooms">收听</a>看失败原因，点「重试」。
+  </div>
+</div>
+<script src="/static/js/live-audio.js"></script>
+<script>
+function $(s){return document.querySelector(s)}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function ts(x){x=Math.max(0,Math.round(x||0));return Math.floor(x/60)+":"+String(x%60).padStart(2,"0")}
+function stateOf(s){
+  const idle = s.idle_s || 0;
+  const sinceChunk = (s.last_chunk_ago_s == null) ? null : s.last_chunk_ago_s;
+  const stalled = !s.paused && ((sinceChunk != null && sinceChunk >= 15)
+    || (sinceChunk == null && (s.elapsed || 0) >= 15));
+  const cls = stalled ? "dead" : (sinceChunk != null && sinceChunk > 45) ? "dead"
+    : (idle > 120 ? "dead" : (idle > 45 ? "idle" : ""));
+  return {idle, sinceChunk, stalled, cls,
+    text: s.paused ? "已暂停" : (s.running ? "监听中" : "已结束")};
+}
+function cardHtml(s, focus){
+  const st = stateOf(s);
+  let m = '<span>已听 '+ts(s.elapsed)+'</span><span>'+s.n_recent_utts+' 句</span>'
+    + '<span>'+(s.speakers||[]).length+' 人</span><span>已推 '+(s.pushed||0)+'</span>';
+  if(st.sinceChunk != null)
+    m += '<span'+(st.stalled?' class="bad"':'')+'>最近一块 '+Math.round(st.sinceChunk)+'s</span>';
+  m += '<span'+(st.idle>120?' class="bad"':'')+'>静默 '+Math.round(st.idle)+'s</span>';
+  return '<div class="card'+(focus?' focus':'')+'">'
+    + '<div class="card-top"><span class="dot '+st.cls+'"></span>'
+    + '<span class="card-title" title="'+esc(s.title)+'">'+esc(roomName(s.title))+'</span>'
+    + '<span class="card-state'+(st.cls==="dead"?' bad':'')+'">'+st.text+'</span></div>'
+    + '<div class="card-meta">'+m+'</div>'
+    + (s.last_line ? '<div class="card-line" title="'+esc(s.last_line)+'">'+esc(s.last_line)+'</div>' : '')
+    + '<div class="card-btns">'
+    + '<button class="primary" data-listen="'+s.id+'" data-label="'+esc(roomName(s.title))+'">听最近</button>'
+    + '<button data-rd="'+s.id+'">全文稿</button>'
+    + '<button data-hi="'+s.id+'">高光榜</button>'
+    + '<button class="danger" data-stop="'+s.id+'">停止</button>'
+    + '</div></div>';
+}
+function roomName(t){
+  t=String(t||"");
+  t=t.replace(/^监控中心\s*·\s*/,"").replace(/^监听中心\s*·\s*/,"").replace(/^直播监听\s*·\s*/,"");
+  t=t.replace(/\s*-\s*抖音直播$/,"").replace(/\s*-\s*抖音$/,"").replace(/\s*·\s*抖音直播$/,"");
+  return t||"未命名";
+}
+async function api(p,opt){const r=await fetch(p,opt);const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.error||("HTTP "+r.status));return j}
+
+const Q = new URLSearchParams(location.search);
+const FOCUS = Q.get("session") || "";
+const SEEK = Q.has("t") ? Number(Q.get("t")) : NaN;
+let autoOpened = false;
+
+async function load(){
+  let data;
+  try{ data = await api("/api/live/list") }
+  catch(e){ $("#list").innerHTML='<div class="empty">加载失败：'+esc(e.message)+'</div>'; return }
+
+  const all = data.sessions || [];
+  const target = FOCUS ? all.find(s=>s.id===FOCUS) : null;
+  const rows = target ? [target] : all;
+
+  if(target){
+    $("#sum").textContent = "只看这一路";
+    $("#focusbar").innerHTML = '<div class="focusbar"><b>正在看这一路</b><span class="spacer"></span>'
+      + '<a href="/live">看全部在听</a></div>';
+    document.title = "实时字幕 · " + roomName(target.title);
+    // 飞书里的「回听」链接带 t：直接打开这一秒；自动播放被拦也没关系，播放器会停在待播状态。
+    if(!autoOpened && isFinite(SEEK) && window.LiveAudio){
+      autoOpened = true;
+      window.LiveAudio.openAt(target.id, SEEK, {label:roomName(target.title)});
+    }
+  } else if(FOCUS){
+    $("#sum").textContent = all.length ? (all.length + " 路在听") : "空闲";
+    $("#focusbar").innerHTML = '<div class="focusbar bad"><b>这一路不在监听。</b>'
+      + '可能已经停止，或服务重启后会话不在了；录音和逐字稿还在。'
+      + '<span class="spacer"></span>'
+      + '<a href="/reader?session='+encodeURIComponent(FOCUS)+(isFinite(SEEK)?'&t='+encodeURIComponent(SEEK):'')+'">打开回放</a>'
+      + '<a href="/live">看全部在听</a></div>';
+    document.title = "实时字幕 · 这一路已结束";
+  } else {
+    $("#sum").textContent = all.length ? (all.length + " 路在听") : "空闲";
+    $("#focusbar").innerHTML = "";
+    document.title = "监听看板 · 直播语记";
+  }
+
+  if(!rows.length){
+    $("#list").innerHTML = FOCUS
+      ? '<div class="empty">这一路现在不在监听<br>如果刚停止，点上面的「打开回放」看逐字稿</div>'
+      : '<div class="empty">现在没有在监听的直播间<br>在浏览器里点扩展图标，把直播间加进来</div>';
+    return;
+  }
+  const narrow = window.matchMedia ? window.matchMedia("(max-width:720px)").matches
+    : window.innerWidth <= 720;
+  if(narrow){
+    // 手机：卡片一路一张；表格在窄屏上会横向溢出，而且这一屏的主要动作是「听」。
+    $("#list").innerHTML = '<div class="cards">'
+      + rows.map(s=>cardHtml(s, target && s.id===target.id)).join('') + '</div>';
+  } else {
+    let h='<table><thead><tr><th>直播间</th><th>状态</th><th>已听</th><th>句数</th><th>说话人</th><th>已推</th><th>静默</th><th>最近一块</th><th>最近一句</th><th></th></tr></thead><tbody>';
+    for(const s of rows){
+      const st = stateOf(s);
+      const spk = (s.speakers||[]).length;
+      h += '<tr'+(target && s.id===target.id?' class="focus"':'')+'>'
+        + '<td class="ti" title="'+esc(s.title)+'">'+esc(roomName(s.title))+'</td>'
+        + '<td><span class="dot '+st.cls+'"></span>'+st.text+'</td>'
+        + '<td class="mono">'+ts(s.elapsed)+'</td>'
+        + '<td class="mono">'+s.n_recent_utts+'</td>'
+        + '<td class="mono">'+spk+'</td>'
+        + '<td class="mono">'+(s.pushed||0)+'</td>'
+        + '<td class="mono'+(st.idle>120?' bad':'')+'">'+Math.round(st.idle)+'s</td>'
+        + '<td class="mono'+(st.stalled?' bad':'')+'">'+(st.sinceChunk==null?'—':Math.round(st.sinceChunk)+'s')+'</td>'
+        + '<td class="last" title="'+esc(s.last_line)+'">'+esc(s.last_line||"—")+'</td>'
+        + '<td>'
+        +   '<button data-listen="'+s.id+'" data-label="'+esc(roomName(s.title))+'">听最近</button>'
+        +   '<button data-hi="'+s.id+'">高光榜</button>'
+        +   '<button data-rd="'+s.id+'">全文稿</button>'
+        +   '<button class="danger" data-stop="'+s.id+'">停止</button>'
+        + '</td></tr>';
+    }
+    h+='</tbody></table>';
+    $("#list").innerHTML=h;
+  }
+
+  $("#list").querySelectorAll("[data-listen]").forEach(b=>b.onclick=()=>{
+    if(!window.LiveAudio){ alert("播放器还没加载好，刷新页面再试。"); return; }
+    window.LiveAudio.open(b.dataset.listen,{label:b.dataset.label, windowSec:300});
+  });
+  $("#list").querySelectorAll("[data-hi]").forEach(b=>b.onclick=()=>{
+    window.open('/highlights?session='+encodeURIComponent(b.dataset.hi),'_blank');
+  });
+  $("#list").querySelectorAll("[data-rd]").forEach(b=>b.onclick=()=>{
+    window.open('/reader?session='+encodeURIComponent(b.dataset.rd),'_blank');
+  });
+  $("#list").querySelectorAll("[data-stop]").forEach(b=>b.onclick=async()=>{
+    if(!confirm("停止这一路？录音会正常收尾保存。"))return;
+    await api('/api/live/stop',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({session_id:b.dataset.stop})}).catch(e=>alert(e.message));
+    load();
+  });
+}
+load();
+setInterval(load, 2000);
+</script>
+</body>
+</html>

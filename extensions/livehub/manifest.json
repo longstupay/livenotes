@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "LiveNotes 监听中心",
+  "version": "0.5.0",
+  "description": "同时捕获多个标签页的音频并转成文字，断流会提醒",
+  "minimum_chrome_version": "116",
+  "permissions": [
+    "tabCapture",
+    "offscreen",
+    "tabs",
+    "storage",
+    "notifications",
+    "alarms",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*",
+    "http://localhost/*",
+    "https://live.douyin.com/*",
+    "https://live.kuaishou.com/*",
+    "https://live.bilibili.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "把当前标签页加入监听"
+  },
+  "icons": {},
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y",
+        "mac": "Command+Shift+Y"
+      },
+      "description": "把当前标签页加入监听"
+    }
+  }
+}

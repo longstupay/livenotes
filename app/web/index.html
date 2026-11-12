@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>直播语记 LiveNotes · 多人语音直播结构化记录</title>
+<link rel="stylesheet" href="/static/css/index.css">
+</head>
+<body>
+<script src="/static/js/embed.js"></script>
+
+<header class="topbar" data-ln-region="topbar">
+  <div class="brand">直播语记 <span class="ver">LiveNotes v0.1</span></div>
+  <div class="sess" id="sess">
+    <button class="sess-btn" id="sessBtn" title="切换场次">
+      <span class="sess-main">
+        <b id="sessTitle">加载中…</b>
+        <small id="sessMeta"></small>
+      </span>
+      <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="sess-menu" id="sessMenu">
+      <div class="sess-search"><input type="text" id="sessQ" placeholder="搜索场次…"></div>
+      <div class="sess-list" id="sessList"></div>
+    </div>
+  </div>
+  <span id="modeBadge" class="badge">—</span>
+  <div class="spacer"></div>
+  <div class="gsearch" id="gsearch">
+    <input type="search" id="gq" placeholder="全局搜索：押金 / 代账…" autocomplete="off">
+    <div class="gres" id="gres"></div>
+  </div>
+  <button class="ghost" id="btnLib" title="录音文件中心：改名、删除、清理录音">🗂 文件中心</button>
+  <button class="ghost" id="btnPeople" title="人物档案：跨场次认人，查某个人到底在不在">👤 人物</button>
+  <span style="font-size:11px;color:var(--faint)" id="ftsTag"></span>
+  <button class="ghost" id="btnExpMd" title="导出本场逐字稿与说话人统计（Markdown）">⬇ 纪要</button>
+  <button class="ghost" id="btnExpSrt" title="导出本场字幕（SRT，可拖进剪辑软件）">⬇ 字幕</button>
+  <button class="ghost" id="btnReader" title="以阅读模式打开本场全文稿（新标签页）">📖 阅读</button>
+  <button class="ghost" id="btnHi" title="本场最值得回听的是哪几段（按信息密度与情绪打分）">🔥 高光榜</button>
+  <button class="livebtn" id="btnLive">● 实时监听</button>
+  <button class="ghost" id="btnLiveHub" title="贴直播间链接就开始听，看每路在录什么">🎧 收听</button>
+  <button class="ghost" id="btnSettings" title="设置：大模型与采集方式">⚙ 设置</button>
+  <button class="m-more" id="mMore" aria-label="更多功能" title="更多">⋯</button>
+</header>
+
+<div class="notice" id="notice" data-ln-region="notice"><b>可行性提示</b><span id="noticeText">加载中…</span></div>
+
+<main class="grid" data-ln-region="workbench">
+  <!-- 左：筛选 -->
+  <aside class="panel" data-ln-region="sidebar">
+    <h3>多维筛选 <small>条件自动生效</small></h3>
+    <div class="scroll">
+      <div class="sec">
+        <div class="sec-t">时间段 <a id="resetTime">重置</a></div>
+        <div style="font-size:11px;color:var(--muted)" id="timeLabel">整场 00:00 – 02:00:00</div>
+        <input type="range" id="tFrom" min="0" max="7200" step="60" value="0">
+        <input type="range" id="tTo" min="0" max="7200" step="60" value="7200">
+        <div class="presets" id="timePresets"></div>
+      </div>
+      <div class="sec">
+        <div class="sec-t">分类 <a id="resetCat">全选</a><a id="btnClassifyAI" style="margin-left:10px"
+          title="用大模型判断每句话的类别；只补没标过的句子，规则分类保留可还原">AI 分类</a></div>
+        <div class="chips" id="catChips"></div>
+        <div class="set-hint" id="aiState" style="margin-top:5px"></div>
+        <div class="set-hint" id="clsNote" style="margin-top:4px"></div>
+      </div>
+      <div class="sec">
+        <div class="sec-t">说话人 <a id="toggleSpk">全选/清空</a></div>
+        <div class="chips" id="spkChips"></div>
+        <div style="display:flex;gap:5px;margin-top:8px;align-items:center">
+          <select id="reclusterK" style="font-size:11px;padding:4px 6px;flex:1" title="自动 = 用轮廓系数决定人数">
+            <option value="0">自动判断人数</option>
+            <option value="2">2 人</option><option value="3">3 人</option>
+            <option value="4">4 人</option><option value="5">5 人</option>
+            <option value="6">6 人</option><option value="8">8 人</option>
+          </select>
+          <button id="btnRecluster" style="font-size:11px;flex:none" title="用本场已保存的声纹，按整场重新分一次人">重新分人</button>
+        </div>
+        <div style="margin-top:9px;padding-top:8px;border-top:1px dashed var(--border)">
+          <div class="sec-t" style="margin-bottom:5px">身份校正（混音模式必备）</div>
+          <select id="renameWho" style="font-size:11px;padding:4px 6px"></select>
+          <div style="display:flex;gap:5px;margin-top:5px">
+            <input type="text" id="renameTo" placeholder="输入真实昵称" style="font-size:11px;padding:4px 6px">
+            <button id="btnRename" style="font-size:11px;flex:none">改名</button>
+          </div>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-t">关键词 <a id="clearQ">清空</a></div>
+        <input type="text" id="q" placeholder="支持中文子串，如 跳槽 / 押金 / 微信">
+        <div class="chips" style="margin-top:7px" id="quickQ"></div>
+      </div>
+      <div class="sec">
+        <div class="sec-t">价值过滤</div>
+        <label class="chk"><input type="checkbox" id="exLow" checked>剔除低价值（广告/闲聊/控场）</label>
+        <label class="chk"><input type="checkbox" id="exOvl">隐藏重叠不可信片段</label>
+        <label class="chk"><input type="checkbox" id="onlyHigh">仅看高价值发言</label>
+      </div>
+      <div class="sec"><button id="btnReset" style="width:100%">重置全部筛选</button></div>
+    </div>
+  </aside>
+
+  <!-- 中：时间轴 + 记录 -->
+  <section class="panel" data-ln-region="stage">
+    <h3>发言记录 <small id="recCount">—</small></h3>
+    <div class="timeline">
+      <div class="tl-title"><span>全场时间轴（点击柱体定位时段；斜纹 = 存在重叠语音）</span>
+        <span><span id="tlFocusTag" class="tl-focus-tag"></span> <span id="tlHint">—</span></span></div>
+      <div id="tlBars"></div>
+      <div class="tl-axis" id="tlAxis"></div>
+    </div>
+    <div class="list-head"><span>共 <b id="totalCount">0</b> 条 · 已按时间升序</span>
+      <div class="spacer"></div><span id="filterDesc" style="font-size:11px"></span></div>
+    <div class="marks-bar" id="marksBar"></div>
+    <div id="evidenceBox"></div>
+    <div class="scroll" id="listScroll"><div id="list"></div></div>
+  </section>
+
+  <!-- 右：总结 -->
+  <aside class="panel" data-ln-region="inspector">
+    <h3>AI 总结 <small>每条要点均可回溯原文</small></h3>
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-m="content" title="作用域：全场，按话题聚类">按内容</button>
+      <button class="tab" data-m="time" title="作用域：左侧时间段，10 分钟分桶">按时间段</button>
+      <button class="tab" data-m="category" title="作用域：当前筛选（忽略分类条件），按性质分组">按分类</button>
+      <button class="tab" data-m="filtered" title="作用域：全部当前筛选条件">当前筛选</button>
+      <button class="tab" data-m="coach" title="从逐字稿统计的话术/节奏/互动画像">主播画像</button>
+    </div>
+    <div class="sum-actions">
+      <select id="engine"><option value="auto">智能：内容够才用大模型</option>
+        <option value="extractive">只用本地抽取（0 token）</option>
+        <option value="llm">强制用大模型</option></select>
+      <button class="primary" id="btnAIAnalyze" style="flex:none"
+        title="一次跑完全部 AI 活：标题 + 概览 + 要点 + 逐句分类。服务端任务，可以关页面等它跑完">AI 分析</button>
+      <button id="btnSum" style="flex:none" title="只按当前面板维度生成总结，不动逐句分类">生成总结</button>
+    </div>
+    <div class="runbar" id="runBar" hidden></div>
+    <div class="tbar" id="tbar" hidden></div>
+    <div class="scroll" id="sumBody"><div class="empty">选择维度后点击「生成总结」<br>要点会强制绑定原始发言 ID</div></div>
+  </aside>
+</main>
+
+<footer class="player" data-ln-region="transport">
+  <button class="p-btn" id="btnPlay" title="播放 / 暂停（空格）"><span id="playIcon">▶</span></button>
+  <span class="p-time"><b id="pCur">00:00</b><i>/</i><span id="pDur">00:00</span></span>
+  <input type="range" class="p-range" id="scrub" min="0" max="7200" step="0.1" value="0">
+  <button class="p-rate" id="pRate" title="播放速度">1×</button>
+  <span class="p-note" id="pNote">点击任意时间码可定位</span>
+</footer>
+
+<!-- 移动端底部 Tab：一次只看一栏 -->
+<nav class="m-tabbar" id="mTabbar">
+  <button type="button" data-t="list" class="on"><i>▤</i><span>记录</span></button>
+  <button type="button" data-t="filter"><i>▽</i><span>筛选</span></button>
+  <button type="button" data-t="sum"><i>✦</i><span>总结</span></button>
+</nav>
+
+<!-- 移动端"更多"：桌面顶栏按钮在小屏收进这里 -->
+<div class="m-sheet" id="mSheet">
+  <div class="msk" data-close="1"></div>
+  <div class="card">
+    <h4>更多功能</h4>
+    <div class="mb-grid" id="mSheetBtns"></div>
+    <div class="mb-note">实时监听（抓标签页音频）只能在电脑浏览器里用；手机端用于回看与检索。</div>
+  </div>
+</div>
+
+<div class="livepanel" id="livePanel">
+  <div class="lp-head">
+    <span class="lp-title"><i class="livedot"></i>实时监听</span>
+    <span class="spacer"></span>
+    <button class="ghost" id="lpClose" title="关闭">✕</button>
+  </div>
+  <div class="lp-body">
+    <div id="lpSetup">
+      <p><b>只录一个标签页的声音</b>，微信提示音、其他页面都不会混进来。</p>
+      <ol>
+        <li>确认抖音直播标签页正在播放</li>
+        <li>点击下面按钮，在弹窗里选中该标签页</li>
+        <li>勾选左下角 <b>「分享标签页音频」</b>，再点分享</li>
+      </ol>
+      <p style="font-size:11px;color:var(--faint)">开始后，Chrome 顶部会出现「Sharing … to 127.0.0.1」提示，这是正常的；
+        画面会嵌到工作台里，声音只用于本地转写。</p>
+      <button class="primary" id="lpStart" style="width:100%">选择标签页并开始</button>
+      <div class="lp-hint" id="lpReady">检查模型中…</div>
+    </div>
+  </div>
+  <div class="lp-err" id="lpErr"></div>
+</div>
+
+<div class="livews" id="liveWs">
+  <div class="ws-top">
+    <span class="ws-title"><i class="livedot"></i>实时监听 <small id="wsSub">直播中</small></span>
+    <span class="lp-timer" id="lpTimer">00:00:00</span>
+    <span class="spacer"></span>
+    <span class="ws-ratio" id="wsRatio"></span>
+    <button class="ghost" id="wsExit" title="收起为小窗，继续监听">收起</button>
+  </div>
+  <div class="ws-main">
+    <div class="ws-left">
+      <div class="ws-video" id="wsVideo">
+        <video class="lp-video" id="lpVideo" muted playsinline></video>
+        <div class="ws-vhint">画面会在你选择标签页后出现在这里<br>只共享音频时，这里只显示字幕</div>
+        <div class="ws-paused"><span>⏸ 已暂停 · 这段不会被记录</span></div>
+      </div>
+      <div class="lp-meter"><i id="lpLevel"></i></div>
+      <div class="lp-status"><span id="lpState">监听中</span><span id="lpStats">—</span></div>
+      <div class="ws-hint" id="wsHint"></div>
+      <div class="ws-metrics" id="wsMetrics"></div>
+      <div class="ws-tools">
+        <button id="wsPause">⏸ 暂停</button>
+        <button id="wsMark">📍 打点<kbd>M</kbd></button>
+        <button id="wsFont">A±</button>
+        <button id="wsCinema" title="视频铺满，字幕压到底部浮层">🖥 画面<kbd>V</kbd></button>
+        <button id="wsFull">⛶ 全屏<kbd>F</kbd></button>
+        <span class="spacer"></span>
+        <button class="primary" id="lpStop">结束并保存</button>
+      </div>
+      <div class="ws-chips" id="lpSpeakers"></div>
+      <div class="ws-marks" id="wsMarks"></div>
+      <div class="ws-err" id="wsErr"></div>
+    </div>
+    <div class="ws-split" id="wsSplit" title="拖动调整左右宽度，双击复位"></div>
+    <div class="ws-right">
+      <div class="ws-rhead"><b>实时字幕</b><span id="wsCount">0 句</span></div>
+      <div class="lp-list ws-list" id="lpList"></div>
+    </div>
+  </div>
+  <div class="ws-finish" id="wsFinish">
+    <div class="wf-card">
+      <div class="wf-title" id="wfTitle">正在保存本场…</div>
+      <div class="wf-sub" id="wfSub">保存由服务端完成，关掉这个页面也不会丢。</div>
+      <ol class="wf-steps" id="wfSteps">
+        <li data-k="save"><i></i><span>录音落盘</span><b>等待</b></li>
+        <li data-k="tidy"><i></i><span>声纹重聚类 · 自动起标题</span><b>等待</b></li>
+        <li data-k="sum"><i></i><span>生成总结</span><b>等待</b></li>
+      </ol>
+      <div class="wf-meta"><span id="wfMeta"></span><span id="wfTime">0.0s</span></div>
+      <div class="wf-actions" id="wfActions"></div>
+    </div>
+  </div>
+  <div class="ws-cinebar" id="wsCinebar">
+    <button id="wsCinePause">⏸ 暂停</button>
+    <button id="wsCineMark">📍 打点</button>
+    <button id="wsCineFont">A±</button>
+    <button id="wsCineSub" title="显示 / 隐藏字幕浮层（S）">字幕</button>
+    <button id="wsCineExit" title="退出画面模式（V / Esc）">✕ 退出画面</button>
+  </div>
+</div>
+
+<div class="livemini" id="liveMini">
+  <i class="livedot"></i><span id="miniText">监听中</span><b id="miniTimer">00:00</b>
+  <button id="miniPause" title="暂停 / 继续">⏸</button>
+  <button id="miniBack">展开</button>
+</div>
+<div class="set-mask" id="setMask"></div>
+<aside class="set-drawer" id="setDrawer">
+  <div class="set-head"><b>设置</b><button class="ghost" id="setClose">✕</button></div>
+  <div class="set-body">
+    <div class="set-sec">
+      <div class="sec-t">采集 <span style="color:var(--faint);font-weight:400;font-size:11px">（抖音直取模式）</span></div>
+      <div class="set-hint" style="margin:6px 0">直取失败后怎么办，改完立即生效，不用重启采集代理。</div>
+      <select id="prefDirectFallback">
+        <option value="ask">停下来等我确认（推荐）</option>
+        <option value="auto">自动切到浏览器（先独立，再共享）</option>
+        <option value="per_room">自动切到独立浏览器</option>
+        <option value="shared">自动切到共享浏览器</option>
+        <option value="none">只报失败，不切换</option>
+      </select>
+      <div class="set-hint" id="prefDirectHint">直取失败时会在收听页停下来，等你点「切换到浏览器采集」；不会自己打开浏览器。</div>
+    </div>
+    <div class="set-sec" id="prefOpenModeRow" style="display:none">
+      <div class="sec-t">桌面版 <span style="color:var(--faint);font-weight:400;font-size:11px">（仅桌面客户端）</span></div>
+      <div class="set-hint" style="margin:6px 0">网页里的「收听 / 文件中心 / 人物 / 阅读 / 高光榜」用哪种窗口打开。</div>
+      <select id="prefOpenMode">
+        <option value="internal">应用内浏览器（推荐）</option>
+        <option value="external">系统浏览器</option>
+      </select>
+      <div class="set-hint">改完立即生效；只影响桌面客户端，网页版不受影响。</div>
+      <div class="sec-t" style="margin-top:14px">采集方式</div>
+      <div class="set-hint" style="margin:6px 0">飞书链接和收听页新建的房间，用哪种方式采音。</div>
+      <select id="prefCaptureMode">
+        <option value="browser">应用内浏览器（默认）</option>
+        <option value="direct">抖音直取（ffmpeg，不开浏览器）</option>
+        <option value="external">外部 Chrome（网页版采集代理）</option>
+      </select>
+      <div class="set-hint">直取只支持抖音，其他站点按「直取失败处理」回退；有房间正在听时，切换会等它们结束后生效。</div>
+      <div class="sec-t" style="margin-top:14px">关闭窗口时</div>
+      <div class="set-hint" style="margin:6px 0">点右上角关闭按钮或 Alt+F4 时的行为；有录音时会先问你。</div>
+      <select id="prefCloseAction">
+        <option value="tray">最小化到托盘，继续录音（默认）</option>
+        <option value="quit">退出程序</option>
+      </select>
+    </div>
+    <div class="set-sec">
+      <div class="sec-t">连接档案
+        <a id="setNew" style="cursor:pointer;margin-left:10px" title="新建一份空配置">＋ 新建</a>
+      </div>
+      <div class="plist" id="setProfiles"></div>
+      <div class="set-hint">点一行切换；鼠标移上去出现 ✎ 改名、⧉ 复制、✕ 删除。</div>
+    </div>
+    <div class="set-sec">
+      <div class="sec-t">当前档案：<b id="curName">—</b>
+        <a id="setRename" style="cursor:pointer;margin-left:8px">改名</a>
+      </div>
+      <div class="sec-t" style="margin-top:10px;color:var(--muted)">服务商模板</div>
+      <div class="set-prov" id="provList"></div>
+      <div class="set-hint">点一个模板会填好接口地址和常用模型，你只需要再填 Key。</div>
+    </div>
+    <div class="set-sec">
+      <div class="sec-t">接口地址</div>
+      <input type="text" id="setBase" placeholder="https://api.deepseek.com/v1" spellcheck="false">
+      <div class="set-hint">OpenAI 兼容协议，一般以 /v1 结尾。</div>
+    </div>
+    <div class="set-sec">
+      <div class="sec-t">模型 <a id="setFetch" style="cursor:pointer">拉取列表</a><a id="setProbe" style="cursor:pointer;margin-left:10px" title="逐个发一次最小请求，看哪些模型真能用">逐个试</a></div>
+      <input type="text" id="setModel" placeholder="deepseek-chat" spellcheck="false">
+      <div class="set-models" id="setModels"></div>
+    </div>
+    <div class="set-sec">
+      <div class="sec-t">API Key</div>
+      <input type="password" id="setKey" placeholder="sk-…（留空表示不修改）" autocomplete="off">
+      <div class="set-hint" id="setKeyHint">仅保存在本机 data/settings.json，不经过任何中间服务器。</div>
+    </div>
+    <div class="set-sec">
+      <div class="sec-t">温度 <span id="setTempVal">0.3</span></div>
+      <input type="range" id="setTemp" min="0" max="1" step="0.05" value="0.3">
+      <div class="set-hint">越低越稳定。总结建议 0.2~0.4。</div>
+    </div>
+    <div class="set-sec">
+      <div class="sec-t">AI 分类 <span style="color:var(--faint);font-weight:400;font-size:11px">（与连接档案无关）</span></div>
+      <div class="rowset">
+        <label style="font-size:12px;color:var(--muted);flex:none">归纳成</label>
+        <input type="number" id="prefTopics" min="3" max="40" step="1" value="10" style="width:80px">
+        <label style="font-size:12px;color:var(--muted);flex:none">个主题</label>
+        <span style="flex:1"></span>
+        <button class="ghost" id="savePrefs" style="flex:none">保存</button>
+      </div>
+      <div class="set-hint">点「AI 分类」时，先把整场归纳成这么多个主题，再把每句话归进去；10~20 比较好用。</div>
+    </div>
+    <div class="set-status" id="setStatus">未配置：总结会用本地抽取式，自动标题只能给摘录。</div>
+  </div>
+  <div class="set-foot">
+    <button id="setTest">测试连接</button>
+    <button class="primary" id="setSave">保存</button>
+  </div>
+</aside>
+<div class="dlg-mask" id="dlgMask">
+  <div class="dlg" id="dlg">
+    <h4 id="dlgTitle">改名</h4>
+    <p id="dlgDesc"></p>
+    <input type="text" id="dlgInput" maxlength="40" autocomplete="off">
+    <div class="dlg-sug" id="dlgSug"></div>
+    <div class="dlg-actions">
+      <button id="dlgCancel">取消</button>
+      <button class="ok" id="dlgOk">确定</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script type="module" src="/static/js/index/main.js"></script>
+</body>
+</html>

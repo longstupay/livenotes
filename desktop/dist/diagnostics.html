@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LiveNotes · 诊断</title>
+<style>
+  :root{--ink:#1d2330;--muted:#6b7480;--line:#e1e6ee;--accent:#2b5cff;--bad:#b3261e;
+    --warn:#b26a00;--ok:#0a7a4a;--bg:#f4f6f9;--surface:#fff}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+  header{position:sticky;top:0;z-index:10;background:var(--surface);border-bottom:1px solid var(--line);
+    padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .brand{font-weight:700;font-size:15px;margin-right:4px}
+  .pill{font-size:11.5px;padding:3px 9px;border-radius:999px;background:#eef2fa;color:#4a5464;
+    font-variant-numeric:tabular-nums}
+  .pill.ok{background:#e8f6ee;color:var(--ok)}
+  .pill.warn{background:#fff4e0;color:var(--warn)}
+  .pill.bad{background:#fdecea;color:var(--bad)}
+  .spacer{flex:1}
+  button{font:inherit;font-size:12px;padding:6px 11px;border-radius:8px;border:1px solid #d9dfe9;
+    background:#fff;color:#465062;cursor:pointer}
+  button:hover{border-color:var(--accent);color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.primary:hover{filter:brightness(1.06);color:#fff}
+  button:disabled{opacity:.55;cursor:default}
+  main{max-width:1000px;margin:0 auto;padding:16px 16px 40px}
+  .statusbar{border:1px solid var(--line);border-radius:12px;background:var(--surface);
+    padding:14px 16px;margin-bottom:14px}
+  .statusbar.bad{border-color:rgba(179,38,30,.3);background:rgba(179,38,30,.035)}
+  .statusbar.warn{border-color:rgba(178,106,0,.3);background:rgba(178,106,0,.035)}
+  .statusbar .big{font-size:15px;font-weight:650;margin-bottom:5px}
+  .statusbar .sub{font-size:12px;color:var(--muted);line-height:1.7;word-break:break-all}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;
+    margin-bottom:14px}
+  .tile{border:1px solid var(--line);border-radius:11px;background:var(--surface);padding:11px 12px}
+  .tile .k{font-size:11px;color:var(--muted);margin-bottom:4px}
+  .tile .v{font-size:13px;font-weight:600;word-break:break-all}
+  h2{font-size:13px;margin:18px 0 9px;color:#465062}
+  .empty{font-size:12px;color:var(--muted);padding:12px 4px}
+  .rows{display:flex;flex-direction:column;gap:8px}
+  .row{border:1px solid var(--line);border-radius:11px;background:var(--surface);padding:10px 12px}
+  .row.bad{border-color:rgba(179,38,30,.28);background:rgba(179,38,30,.03)}
+  .row.warn{border-color:rgba(178,106,0,.26);background:rgba(178,106,0,.025)}
+  .row .top{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap}
+  .row .ts{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .row .kind{font-size:11px;padding:1px 7px;border-radius:999px;background:#eef2fa;color:#4a5464}
+  .row .msg{font-size:12.5px;line-height:1.65;word-break:break-word}
+  .row .detail{font-size:11px;color:var(--muted);line-height:1.6;margin-top:5px;
+    white-space:pre-wrap;word-break:break-all}
+  .footer{font-size:11px;color:var(--muted);line-height:1.9;margin-top:20px}
+  code{background:#eef2fa;border-radius:4px;padding:1px 5px}
+</style>
+</head>
+<body>
+<header>
+  <span class="brand">诊断与日志</span>
+  <span class="pill" id="status-pill">读取中…</span>
+  <span class="spacer"></span>
+  <button class="primary" id="btn-export">导出诊断包</button>
+  <button id="btn-kill" title="只结束 engine.json 记录的旧引擎；当前正在用的引擎不会被动">结束残留引擎</button>
+  <button id="btn-logs">打开日志目录</button>
+  <button id="btn-refresh">刷新</button>
+</header>
+<main>
+  <div class="statusbar" id="statusbar">
+    <div class="big" id="status-title">正在读取诊断状态…</div>
+    <div class="sub" id="status-sub"></div>
+  </div>
+
+  <div class="grid">
+    <div class="tile"><div class="k">引擎</div><div class="v" id="tile-engine">—</div></div>
+    <div class="tile"><div class="k">端口</div><div class="v" id="tile-port">—</div></div>
+    <div class="tile"><div class="k">引擎进程</div><div class="v" id="tile-engine-pid">—</div></div>
+    <div class="tile"><div class="k">断流阈值</div><div class="v" id="tile-threshold">—</div></div>
+    <div class="tile"><div class="k">壳进程</div><div class="v" id="tile-pid">—</div></div>
+  </div>
+
+  <h2>断流中的场次</h2>
+  <div class="rows" id="stalls"><div class="empty">没有断流。</div></div>
+
+  <h2>房间视图异常（最近 10 分钟）</h2>
+  <div class="rows" id="crashes"><div class="empty">没有崩溃记录。</div></div>
+
+  <h2>最近事件</h2>
+  <div class="rows" id="events"><div class="empty">还没有事件。</div></div>
+
+  <div class="footer" id="footer"></div>
+</main>
+<script>
+const invoke = (cmd, args) => window.__TAURI__.core.invoke(cmd, args);
+const $ = (id) => document.getElementById(id);
+let busy = false;
+let cached = null;
+
+function esc(v) {
+  return String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+function ago(ts) {
+  if (!ts) return "";
+  const t = Date.parse(ts);
+  if (!t) return ts;
+  const s = Math.max(0, (Date.now() - t) / 1000);
+  if (s < 60) return Math.round(s) + " 秒前";
+  if (s < 3600) return Math.round(s / 60) + " 分钟前";
+  return Math.round(s / 3600) + " 小时前";
+}
+function setPill(el, text, cls) {
+  el.textContent = text;
+  el.className = "pill" + (cls ? " " + cls : "");
+}
+function levelCls(level) {
+  return level === "error" ? "bad" : level === "warn" ? "warn" : "";
+}
+
+function render(s) {
+  cached = s;
+  const warn = !!(s.status && s.status.warn);
+  const state = (s.engine && s.engine.state) || "unknown";
+  $("statusbar").className = "statusbar" + (warn ? (state === "ok" ? " warn" : " bad") : "");
+  $("status-title").textContent = (s.status && s.status.text) || "状态未知";
+  const sub = [];
+  if (s.engine) {
+    sub.push("引擎：" + state + (s.engine.port ? " · 127.0.0.1:" + s.engine.port : "") +
+      (s.engine.pid ? " · pid " + s.engine.pid : ""));
+    if (s.engine.started_at) sub.push("启动：" + esc(s.engine.started_at));
+    if (s.engine.detail) sub.push(esc(s.engine.detail));
+    if (s.engine.last_ok) sub.push("最后正常：" + esc(s.engine.last_ok));
+  }
+  $("status-sub").innerHTML = sub.join("<br>");
+  setPill($("status-pill"), warn ? "需要关注" : "运行正常", warn ? (state === "ok" ? "warn" : "bad") : "ok");
+
+  $("tile-engine").textContent = state;
+  $("tile-port").textContent = s.engine && s.engine.port ? "127.0.0.1:" + s.engine.port : "—";
+  $("tile-engine-pid").textContent = s.engine && s.engine.pid ? s.engine.pid : "—";
+  $("tile-threshold").textContent = (s.stall_threshold_s || "—") + " 秒没音频块";
+  $("tile-pid").textContent = s.shell_pid || "—";
+
+  const stalls = s.stalls || [];
+  $("stalls").innerHTML = stalls.length ? stalls.map((x) =>
+    '<div class="row warn"><div class="top">' +
+      '<span class="msg">' + esc(x.title || x.session_id) + '</span>' +
+      '<span class="kind">' + esc(x.notified ? "已提示" : "观察中") + '</span>' +
+    '</div><div class="detail">session ' + esc(x.session_id) +
+      ' · 距最后一块音频 ' + Number(x.idle_s || 0).toFixed(1) + ' 秒</div></div>'
+  ).join("") : '<div class="empty">没有断流。</div>';
+
+  const crashes = s.crashes || [];
+  $("crashes").innerHTML = crashes.length ? crashes.map((x) =>
+    '<div class="row bad"><div class="top">' +
+      '<span class="kind">' + esc(x.kind) + '</span>' +
+      '<span class="ts">' + esc(ago(x.ts)) + '</span>' +
+    '</div><div class="msg">房间 ' + esc(x.room) + '</div>' +
+    '<div class="detail">' + esc(x.detail) + '</div></div>'
+  ).join("") : '<div class="empty">没有崩溃记录。</div>';
+
+  const events = s.events || [];
+  $("events").innerHTML = events.length ? events.map((e) =>
+    '<div class="row ' + levelCls(e.level) + '"><div class="top">' +
+      '<span class="kind">' + esc(e.kind) + '</span>' +
+      '<span class="ts">' + esc(ago(e.ts)) + '</span>' +
+    '</div><div class="msg">' + esc(e.message) + '</div>' +
+    (e.detail ? '<div class="detail">' + esc(JSON.stringify(e.detail, null, 0)) + '</div>' : '') +
+    '</div>'
+  ).join("") : '<div class="empty">还没有事件。</div>';
+
+  const paths = s.paths || {};
+  const last = s.last_export;
+  $("footer").innerHTML =
+    "日志目录：<code>" + esc(paths.logs || "—") + "</code><br>" +
+    "数据目录：<code>" + esc(paths.data || "—") + "</code><br>" +
+    (last ? "上次导出：" + esc(last.ts) + " · <code>" + esc(last.path) + "</code>" : "还没有导出过诊断包。");
+}
+
+async function refresh() {
+  if (busy) return;
+  try {
+    render(await invoke("diag_snapshot"));
+  } catch (e) {
+    $("status-title").textContent = "读取诊断状态失败";
+    $("status-sub").textContent = String(e);
+    setPill($("status-pill"), "读取失败", "bad");
+  }
+}
+
+async function doExport() {
+  if (busy) return;
+  busy = true;
+  $("btn-export").disabled = true;
+  const old = $("btn-export").textContent;
+  $("btn-export").textContent = "正在打包…";
+  try {
+    const path = await invoke("diag_export");
+    $("status-title").textContent = "诊断包已导出";
+    $("status-sub").innerHTML = "文件：<code>" + esc(path) + "</code><br>已在资源管理器中定位。";
+  } catch (e) {
+    $("status-title").textContent = "诊断包导出失败";
+    $("status-sub").textContent = String(e);
+  } finally {
+    busy = false;
+    $("btn-export").disabled = false;
+    $("btn-export").textContent = old;
+    refresh();
+  }
+}
+
+$("btn-export").addEventListener("click", doExport);
+$("btn-kill").addEventListener("click", async () => {
+  if (busy) return;
+  if (!confirm("只用于清理已崩溃/无响应的旧引擎。当前正在使用的引擎不会被结束。继续？")) return;
+  busy = true;
+  $("btn-kill").disabled = true;
+  try {
+    const msg = await invoke("diag_engine_kill");
+    $("status-title").textContent = msg;
+    $("status-sub").textContent = "";
+  } catch (e) {
+    $("status-title").textContent = "未结束残留引擎";
+    $("status-sub").textContent = String(e);
+  } finally {
+    busy = false;
+    $("btn-kill").disabled = false;
+    refresh();
+  }
+});
+$("btn-logs").addEventListener("click", () => invoke("diag_open_logs").catch(() => {}));
+$("btn-refresh").addEventListener("click", refresh);
+
+// 壳在失败时 emit livenotes://diag；没有事件 API 时靠轮询兜底。
+try {
+  if (window.__TAURI__ && window.__TAURI__.event && window.__TAURI__.event.listen) {
+    window.__TAURI__.event.listen("livenotes://diag", refresh);
+  }
+} catch (e) {}
+refresh();
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>

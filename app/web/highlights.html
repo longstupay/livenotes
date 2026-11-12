@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>高光榜 · 直播语记</title>
+<style>
+:root{
+  --ink:#1d2330; --muted:#6b7480; --faint:#9aa3b0; --line:#e6e9ef;
+  --accent:#2b5cff; --paper:#ffffff; --bg:#f4f6f9;
+  --hot:#e0432f; --warm:#c9761c; --cool:#2b5cff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+a{color:inherit}
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;
+  padding:10px 18px;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line)}
+.top .brand{font-weight:700;font-size:13px;letter-spacing:.2px}
+.top .back{font-size:12.5px;color:var(--muted);text-decoration:none;padding:4px 8px;border-radius:7px}
+.top .back:hover{background:#eef1f7;color:var(--ink)}
+.grow{flex:1}
+.top button{font:inherit;font-size:12px;padding:5px 11px;border-radius:8px;cursor:pointer;
+  border:1px solid #d8dde6;background:#fff;color:#3c4757}
+.top button:hover{border-color:var(--accent);color:var(--accent)}
+.top button:disabled{opacity:.5;cursor:default}
+.wrap{max-width:760px;margin:0 auto;padding:30px 22px 150px}
+h1{font-size:22px;line-height:1.45;margin:0 0 8px}
+.sub{font-size:12.5px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.sub .sep{color:#cfd5de}
+.note{margin:16px 0 22px;padding:11px 14px;border:1px solid var(--line);border-radius:10px;
+  background:#fff;font-size:12px;color:var(--muted);line-height:1.75}
+.note b{color:var(--ink)}
+.card{position:relative;background:#fff;border:1px solid var(--line);border-radius:12px;
+  padding:14px 16px 13px;margin:0 0 12px;transition:border-color .12s,box-shadow .12s}
+.card:hover{border-color:#cfd8ff;box-shadow:0 2px 12px rgba(43,92,255,.07)}
+.card.on{border-color:var(--accent);box-shadow:0 2px 14px rgba(43,92,255,.14)}
+.hd{display:flex;align-items:center;gap:8px;margin-bottom:7px;flex-wrap:wrap}
+.rank{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;min-width:16px}
+.badge{font-size:10.5px;padding:1px 7px;border-radius:5px;font-weight:600;letter-spacing:.3px}
+.b-both{color:#fff;background:var(--hot)}
+.b-live{color:#a4430c;background:#fdf0e3}
+.b-info{color:#1d3ea8;background:#eaf0ff}
+.b-manual{color:#8a5a00;background:#fff4d6}
+.p0{color:#b3261e;background:#fdeceb;border:1px solid #f6cfcb}
+.who{font-size:12.5px;font-weight:700}
+.t{font-size:11.5px;color:var(--faint);font-variant-numeric:tabular-nums;cursor:pointer;
+  padding:2px 6px;border-radius:6px;border:1px solid transparent}
+.t:hover{border-color:#d8dde6;color:var(--accent)}
+.score{margin-left:auto;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+.score b{color:var(--ink);font-size:13px}
+.why{font-size:11.5px;color:var(--warm);margin:0 0 6px;line-height:1.6}
+.card.info .why{color:#5a6b8c}
+.txt{font-size:15px;line-height:1.85;margin:0;word-break:break-word;color:#2a3240}
+.acts{display:flex;gap:8px;margin-top:10px}
+.acts button,.acts a{font:inherit;font-size:11.5px;padding:4px 10px;border-radius:7px;cursor:pointer;
+  border:1px solid #dde2ea;background:#fff;color:#4a5464;text-decoration:none}
+.acts button:hover,.acts a:hover{border-color:var(--accent);color:var(--accent)}
+.kws{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 14px;font-size:12px}
+.kws .lbl{color:var(--muted)}
+.kw{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;
+  background:#eef3ff;border:1px solid #c3d3ff;color:#1d3ea8}
+.kw i{cursor:pointer;font-style:normal;opacity:.5}
+.kw i:hover{opacity:1;color:#b3261e}
+.kws input{font:inherit;font-size:12px;padding:3px 9px;border:1px dashed #cfd5de;
+  border-radius:999px;background:transparent;width:130px;color:var(--ink)}
+.kws input:focus{outline:none;border-color:var(--accent);border-style:solid}
+.fbstat{margin:0 0 18px;font-size:12px;color:var(--muted);line-height:1.7}
+.fbstat b{color:var(--ink)}
+.fbstat .ok{color:#0a7a4a}
+.fbstat .ng{color:#c9761c}
+.acts .fb{margin-left:auto;display:flex;gap:6px}
+.acts .fb button.on{background:#eef3ff;border-color:#c3d3ff;color:#1d3ea8;font-weight:600}
+.acts .fb button.dn.on{background:#fdeceb;border-color:#f6cfcb;color:#b3261e}
+.empty{padding:70px 0;text-align:center;color:var(--faint);font-size:13px;line-height:2}
+.empty button{font:inherit;font-size:12.5px;margin-top:14px;padding:7px 18px;border-radius:9px;
+  border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer}
+.player{position:fixed;left:0;right:0;bottom:0;display:none;align-items:center;gap:12px;
+  padding:12px 20px;background:rgba(255,255,255,.97);border-top:1px solid var(--line);
+  backdrop-filter:blur(8px);z-index:30}
+.player.show{display:flex}
+.player .pv{font-size:12.5px;min-width:180px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.player .pv b{color:var(--ink)}
+.player .bar{flex:1;height:4px;border-radius:2px;background:#e9edf4;overflow:hidden}
+.player .bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s linear}
+.player button{font:inherit;font-size:12px;padding:5px 12px;border-radius:8px;cursor:pointer;
+  border:1px solid #d8dde6;background:#fff;color:#3c4757}
+.player .tm{font-size:11.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<script src="/static/js/embed.js"></script>
+<div class="top" data-ln-region="topbar">
+  <span class="brand">直播语记</span>
+  <a class="back" id="back" href="/">← 返回</a>
+  <span class="grow"></span>
+  <a class="back" href="/pushes" title="推了什么、没推为什么">📣 推送</a>
+  <a class="back" href="/glossary" title="术语纠错与检索">📚 术语</a>
+  <button id="sortBtn">按时间</button>
+  <button id="buildBtn">重新分析</button>
+</div>
+
+<div class="wrap" data-ln-region="stage">
+  <h1 id="title">高光榜</h1>
+  <div class="sub" id="sub"></div>
+  <div class="note" id="note" style="display:none"></div>
+  <div class="kws" id="kws"></div>
+  <div class="fbstat" id="fbStat"></div>
+  <div id="list"></div>
+</div>
+
+<div class="player" id="player">
+  <span class="pv" id="pv">—</span>
+  <div class="bar"><i id="bar"></i></div>
+  <span class="tm" id="tm">0:00</span>
+  <button id="stopBtn">停止</button>
+  <button id="openBtn">去全文</button>
+</div>
+<audio id="au" preload="none"></audio>
+
+<script>
+var S = { sid:'', data:[], meta:{}, learn:[], order:'score', cur:-1, from:0, to:0 };
+function $(s){ return document.querySelector(s); }
+function qs(k){ var m = new RegExp('[?&]'+k+'=([^&]*)').exec(location.search); return m ? decodeURIComponent(m[1]) : ''; }
+function ts(x){ x = Math.max(0, Math.floor(x||0)); var m = Math.floor(x/60), s = x%60;
+  return m + ':' + (s<10?'0':'') + s; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+/* 时间码是"录音第几秒"，对不上表。title 里补墙钟：北京 + UTC。
+   用 started_utc（绝对时间）；老场次没有时按本机时区解释。 */
+var WALL={at:null};
+function wallInit(s){
+  if(!s) return;
+  var raw=s.started_utc||s.started_at; if(!raw) return;
+  var d=new Date(raw); if(!isNaN(d.getTime())) WALL.at=d;
+}
+function wallFmt(d,tz){
+  try{
+    var parts=new Intl.DateTimeFormat('zh-CN',{timeZone:tz,hour12:false,month:'2-digit',
+      day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).formatToParts(d);
+    var o={}; parts.forEach(function(x){o[x.type]=x.value});
+    return o.month+'-'+o.day+' '+o.hour+':'+o.minute+':'+o.second;
+  }catch(e){ return '' }
+}
+function wallTitle(t){
+  if(!WALL.at) return '';
+  var d=new Date(WALL.at.getTime()+Math.max(0,t||0)*1000);
+  var bj=wallFmt(d,'Asia/Shanghai'), utc=wallFmt(d,'UTC');
+  return (bj&&utc)?('北京 '+bj+' / UTC '+utc):'';
+}
+function api(path, opt){
+  return fetch(path, opt).then(function(r){
+    return r.json().then(function(j){
+      if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+      return j; }); });
+}
+
+function render(){
+  var list = $('#list');
+  var rows = S.data.slice();
+  if (S.order === 'time') rows.sort(function(a,b){ return a.peak_t - b.peak_t; });
+  if (!rows.length){
+    list.innerHTML = '<div class="empty">这场还没分析过<br>点下面的按钮，算一遍「最值得听的是哪几段」' +
+      '<br><button id="goBuild">开始分析</button></div>';
+    var gb = $('#goBuild'); if (gb) gb.onclick = build;
+    return;
+  }
+  var kindName = { both:'双高', live:'有戏', info:'干货', manual:'手动' };
+  list.innerHTML = rows.map(function(h, i){
+    var kind = h.kind || 'info';
+    return '<div class="card ' + kind + (S.cur===i?' on':'') + '" data-i="' + i + '">' +
+      '<div class="hd">' +
+        '<span class="rank">' + (i+1) + '</span>' +
+        '<span class="badge b-' + kind + '">' + (kindName[kind]||kind) + '</span>' +
+
+        '<span class="who">' + esc(h.speaker_label || '—') + '</span>' +
+        '<span class="t" data-t="' + h.peak_t + '" title="' + esc(wallTitle(h.peak_t)) + '">' + ts(h.peak_t) + '</span>' +
+        '<span class="score">' + (h.n_utts > 1 ? h.n_utts + ' 句 · ' : '') +
+          '信息 ' + Number(h.info_z).toFixed(1) +
+          ' · 情绪 ' + Number(h.arousal_z).toFixed(1) +
+          ' · 总分 <b>' + Number(h.score).toFixed(1) + '</b></span>' +
+      '</div>' +
+      '<div class="why">' + esc(h.why || '综合得分靠前') + '</div>' +
+      '<p class="txt">' + esc(h.text) + '</p>' +
+      '<div class="acts">' +
+        '<button data-play="' + i + '">▶ 试听这一段</button>' +
+        '<a href="/reader?session=' + encodeURIComponent(S.sid) + '&t=' + h.peak_t + '">去原文定位</a>' +
+        '<span class="fb">' +
+          '<button data-fb="1" data-id="' + h.id + '" class="' + (h.feedback > 0 ? 'on' : '') + '">👍 有用</button>' +
+          '<button data-fb="-1" data-id="' + h.id + '" class="dn ' + (h.feedback < 0 ? 'on' : '') + '">👎 没用</button>' +
+        '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  list.querySelectorAll('[data-play]').forEach(function(b){
+    b.onclick = function(e){ e.stopPropagation(); play(rows[+b.dataset.play]); };
+  });
+  list.querySelectorAll('.t').forEach(function(b){
+    b.onclick = function(e){
+      var h = rows[+b.closest('.card').dataset.i]; play(h);
+    };
+  });
+  list.querySelectorAll('[data-fb]').forEach(function(b){
+    b.onclick = function(e){ e.stopPropagation(); vote(+b.dataset.id, +b.dataset.fb); };
+  });
+}
+
+function load(){
+  return api('/api/highlights?session_id=' + encodeURIComponent(S.sid)).then(function(j){
+    var s = j.session || {};
+    var meta = j.meta || {};
+    wallInit(s);
+    S.data = j.highlights || [];
+    S.learn = j.learned || [];
+    $('#title').textContent = s.title || '高光榜';
+    document.title = (s.title || '高光榜') + ' · 高光';
+    $('#back').href = '/reader?session=' + encodeURIComponent(S.sid);
+    var dur = s.duration_s || 0;
+    $('#sub').innerHTML = '<span>' + ts(dur) + '</span><span class="sep">·</span>' +
+      '<span>' + (s.n_utterances || '') + '</span>' +
+      '<span class="sep">·</span><span>分数门槛 ' + (j.th || 1.5) + '</span>' +
+      (meta.built_at ? '<span class="sep">·</span><span>分析于 ' + esc(meta.built_at.slice(11)) + '</span>' : '');
+    S.meta = meta;
+    var note = $('#note');
+    if (S.data.length){
+      note.style.display = '';
+      note.innerHTML = '<b>这两列分数都是相对本场基线</b>的 z 值，不是绝对好坏：<br>' +
+        '「信息」看金额/数字、结论句、答疑、长段陈述；「情绪」看语速陡增、抢麦、短句连发。<br>' +
+        '一个安静的访谈和一个喊麦房，音量基线差 20dB，所以只有相对本场才有意义。';
+    } else {
+      note.style.display = 'none';
+    }
+    render();
+    paintStat();
+  });
+}
+
+/* ---------------- 关注词 ---------------- */
+function renderKws(list){
+  var box = $('#kws');
+  var html = '<span class="lbl">关注词</span>';
+  if (!list.length){
+    html += '<span class="lbl">（还没有：加上 FDE、OPC 这类词，相关内容会更容易上榜和被推）</span>';
+  }
+  list.forEach(function(w, i){
+    html += '<span class="kw">' + esc(w) + '<i data-del="' + i + '">×</i></span>';
+  });
+  html += '<input id="kwIn" placeholder="+ 添加" />';
+  box.innerHTML = html;
+  box.querySelectorAll('[data-del]').forEach(function(b){
+    b.onclick = function(){
+      var next = list.slice(); next.splice(+b.dataset.del, 1); saveKws(next);
+    };
+  });
+  var inp = $('#kwIn');
+  inp.onkeydown = function(e){
+    if (e.key !== 'Enter') return;
+    var v = (inp.value || '').trim();
+    if (!v) return;
+    saveKws(list.concat(v.split(/[、,，\s]+/).filter(Boolean)));
+  };
+}
+function saveKws(list){
+  return api('/api/profile', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ keywords: list }) }).then(function(j){
+    renderKws(j.keywords || []);
+    $('#fbStat').innerHTML = '关注词已保存 —— 相关句子会加权，重新分析后体现在分数里';
+  });
+}
+function loadKws(){
+  return api('/api/profile').then(function(j){ renderKws(j.keywords || []); })
+           .catch(function(){ $('#kws').innerHTML = ''; });
+}
+
+function vote(hid, v){
+  var h = null;
+  for (var i = 0; i < S.data.length; i++) if (S.data[i].id === hid) h = S.data[i];
+  if (!h) return;
+  var next = (h.feedback === v) ? 0 : v;      // 再点同一个按钮 = 撤销
+  api('/api/highlights/feedback', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ session_id: S.sid, id: hid, verdict: next })
+  }).then(function(r){
+    h.feedback = next;
+    if (r.meta) S.meta = r.meta;
+    if (r.learned) S.learn = r.learned;
+    paintStat();
+    render();
+  }).catch(function(e){
+    $('#fbStat').innerHTML = '<span style="color:#b3261e">打标失败：' + esc(e.message) + '</span>';
+  });
+}
+
+function paintStat(){
+  var el = $('#fbStat');
+  var top = S.data.slice(0, 5);
+  var ratedTop = top.filter(function(x){ return (x.feedback || 0) !== 0; }).length;
+  var goodTop = top.filter(function(x){ return (x.feedback || 0) > 0; }).length;
+  var m = S.meta || {};
+  var rated = m.rated || 0, good = m.good || 0;
+  var txt = '已标 <b>' + rated + '</b> 条';
+  if (rated) txt += ' · 认可 <b>' + good + '</b> 条（' + Math.round(100 * good / rated) + '%）';
+  if (ratedTop === 5 && top.length === 5){
+    txt += ' · 前 5 命中 <b>' + goodTop + '/5</b>' +
+      (goodTop >= 4 ? ' <span class="ok">达标</span>' : ' <span class="ng">未达标（目标 4/5）</span>');
+  } else if (rated) {
+    txt += ' · 前 5 还差 ' + (5 - ratedTop) + ' 条没标';
+  } else {
+    txt += ' · 点 👍 / 👎 顺手标一下：这既是精度验收，也是推送门槛的依据';
+  }
+  var learn = (S.learn || []).filter(function(x){ return x.delta; });
+  if (learn.length){
+    txt += '<br><span class="lbl">推送偏好（按你的 👍/👎 学，下一场生效）：</span>' +
+      learn.map(function(x){
+        return esc(x.label) + (x.delta < 0 ? ' 更少推' : ' 更容易推') +
+          '（' + x.good + '👍/' + x.bad + '👎）';
+      }).join(' · ');
+  }
+  el.innerHTML = txt;
+}
+
+function build(){
+  var b = $('#buildBtn'); b.disabled = true; b.textContent = '分析中…';
+  api('/api/highlights/build', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ session_id: S.sid }) }).then(function(res){
+    return load();
+  }).catch(function(e){
+    $('#list').innerHTML = '<div class="empty">分析失败：' + esc(e.message) + '</div>';
+  }).then(function(){ b.disabled = false; b.textContent = '重新分析'; });
+}
+
+/* ---------------- 试听 ---------------- */
+var au = $('#au');
+function play(h){
+  if (!h) return;
+  S.from = h.t_start; S.to = h.t_end;
+  $('#pv').title = wallTitle(h.peak_t);
+  if (!au.src) au.src = '/api/audio?session_id=' + encodeURIComponent(S.sid);
+  $('#player').classList.add('show');
+  $('#pv').innerHTML = '<b>' + ts(h.peak_t) + '</b> ' + esc(h.speaker_label || '') +
+    ' · ' + esc((h.text || '').slice(0, 22));
+  $('#openBtn').onclick = function(){ location.href = '/reader?session=' + encodeURIComponent(S.sid) + '&t=' + h.peak_t; };
+  var seek = function(){
+    au.currentTime = S.from;
+    au.play().catch(function(){});
+    au.removeEventListener('loadedmetadata', seek);
+  };
+  if (au.readyState >= 1) seek(); else au.addEventListener('loadedmetadata', seek);
+  tick();
+}
+function tick(){
+  if (!au.paused){
+    var span = Math.max(0.5, S.to - S.from);
+    var p = Math.min(1, Math.max(0, (au.currentTime - S.from) / span));
+    $('#bar').style.width = (p*100) + '%';
+    $('#tm').textContent = ts(au.currentTime);
+    if (au.currentTime >= S.to){ au.pause(); $('#bar').style.width = '0%'; return; }
+  }
+  requestAnimationFrame(tick);
+}
+$('#stopBtn').onclick = function(){ au.pause(); au.currentTime = S.from; $('#bar').style.width='0%'; };
+$('#sortBtn').onclick = function(){
+  S.order = S.order === 'score' ? 'time' : 'score';
+  this.textContent = S.order === 'score' ? '按时间' : '按分数';
+  render();
+};
+$('#buildBtn').onclick = build;
+
+/* ---------------- 启动 ---------------- */
+S.sid = qs('session');
+if (!S.sid){
+  $('#list').innerHTML = '<div class="empty">缺少 session 参数<br>请从主页或全文稿页进入</div>';
+} else {
+  loadKws();
+  load().catch(function(e){
+    $('#list').innerHTML = '<div class="empty">加载失败：' + esc(e.message) + '</div>';
+  });
+}
+</script>
+</body>
+</html>

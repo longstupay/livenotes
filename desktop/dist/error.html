@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>LiveNotes · 引擎未启动</title>
+<style>
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui;
+    background:#f4f6f9;color:#1d2330}
+  .card{max-width:760px;margin:10vh auto;padding:28px;background:#fff;border:1px solid #f0c9c4;
+    border-radius:14px}
+  h1{font-size:20px;margin:0 0 8px;color:#b3261e}
+  p{color:#5c6675;font-size:13px;line-height:1.85}
+  code{background:#eef2fa;border-radius:4px;padding:1px 5px;word-break:break-all}
+  .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+  button{font:inherit;font-size:12.5px;padding:7px 13px;border-radius:8px;border:1px solid #d9dfe9;
+    background:#fff;color:#465062;cursor:pointer}
+  button:hover{border-color:#2b5cff;color:#2b5cff}
+  button.primary{background:#2b5cff;border-color:#2b5cff;color:#fff}
+  button.primary:hover{filter:brightness(1.06);color:#fff}
+  button:disabled{opacity:.55;cursor:default}
+  #result{font-size:12px;color:#465062;line-height:1.8;margin-top:12px;word-break:break-all}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>引擎未启动</h1>
+  <p>本地 Python 引擎没有通过健康检查。日志在
+  <code>%LOCALAPPDATA%\LiveNotes\logs\engine.log</code>，壳日志和诊断事件在同目录的
+  <code>shell.log</code> / <code>diag.jsonl</code>。</p>
+  <p>也可以右键任务栏托盘里的 LiveNotes 图标 →「诊断与日志…」查看失败原因，
+  或直接用下面的按钮打包诊断信息。</p>
+  <div class="acts">
+    <button class="primary" id="btn-export">导出诊断包</button>
+    <button id="btn-logs">打开日志目录</button>
+    <button id="btn-diag">打开诊断页</button>
+  </div>
+  <div id="result"></div>
+</div>
+<script>
+const invoke = (cmd) => window.__TAURI__.core.invoke(cmd);
+const $ = (id) => document.getElementById(id);
+$("btn-export").addEventListener("click", async () => {
+  const btn = $("btn-export");
+  btn.disabled = true;
+  btn.textContent = "正在打包…";
+  try {
+    const path = await invoke("diag_export");
+    $("result").innerHTML = "诊断包已导出，并已在资源管理器中定位：<br><code>" +
+      String(path).replace(/[&<>]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])) + "</code>";
+  } catch (e) {
+    $("result").textContent = "导出失败：" + e;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "导出诊断包";
+  }
+});
+$("btn-logs").addEventListener("click", () => invoke("diag_open_logs").catch(() => {}));
+$("btn-diag").addEventListener("click", () => invoke("diag_open_window").catch(() => {}));
+</script>
+</body></html>

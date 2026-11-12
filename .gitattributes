@@ -1,0 +1,10 @@
+* text=auto eol=lf
+
+# Windows 批处理必须是 CRLF：换成 LF，cmd 会把一行拆成几段当命令执行
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+*.png binary
+*.jpg binary
+*.wav binary
+*.onnx binary

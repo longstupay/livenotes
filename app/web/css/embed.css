@@ -1,0 +1,31 @@
+/* ==================================================================
+   嵌入模式的基础布局（协议层，由 app/web/js/embed.js 在 ?embed=1 时加载）
+
+   只做一件事：页面被宿主嵌进内容区时「让位」——藏掉自己的顶栏、
+   把主内容铺满、设置抽屉铺满视口。这里不写任何配色或主题，
+   配色在宿主皮肤（overlay）里。
+
+   选择器只认锚点 [data-ln-region]，不认具体标签和结构：
+   基座改版时只要锚点在，皮肤就不会跟着崩。契约见 docs/29。
+   ================================================================== */
+html.ln-embed [data-ln-region="topbar"]{display:none!important}
+html.ln-embed body{padding-top:0!important}
+html.ln-embed [data-ln-region="stage"]{padding-top:18px!important}
+
+/* 工作台：播放条留在底部，中间三栏自己撑满 */
+html.ln-embed-index body{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+html.ln-embed-index [data-ln-region="workbench"]{flex:1;height:auto;min-height:0}
+html.ln-embed-index [data-ln-region="transport"]{flex:0 0 auto}
+html.ln-embed-index [data-ln-region="notice"]{display:none!important}
+
+/* 设置被宿主当作独立页面打开时：不要让后面的工作台露出来 */
+html.ln-embed-settings [data-ln-region="workbench"],
+html.ln-embed-settings [data-ln-region="notice"],
+html.ln-embed-settings [data-ln-region="transport"],
+html.ln-embed-settings .m-tabbar,
+html.ln-embed-settings .set-mask{display:none!important}
+html.ln-embed-settings .set-drawer{position:fixed;inset:0;width:100%;max-width:none;
+  transform:none;box-shadow:none;background:var(--bg)}
+html.ln-embed-settings .set-body{max-width:760px;width:100%;margin:0 auto}
+html.ln-embed-settings .set-head{padding:0 max(22px,calc((100vw - 760px)/2))}
+html.ln-embed-settings #setClose{display:none}

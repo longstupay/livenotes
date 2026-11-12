@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SPIKE STAGE</title>
+<style>
+  :root{--bg:#061018;--ink:#D8F6FF;--cyan:#39D6FF;--jade:#7FD1AE;--amber:#E6B566;--bad:#E8776D}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-family:"Cascadia Mono",Consolas,"Microsoft YaHei",monospace}
+  .stage{position:absolute;inset:0;display:flex;flex-direction:column;
+    border:3px solid var(--cyan);
+    background:
+      radial-gradient(900px 420px at 18% 0%,rgba(57,214,255,.20),transparent 62%),
+      radial-gradient(700px 420px at 92% 110%,rgba(127,209,174,.14),transparent 60%),
+      repeating-linear-gradient(0deg,rgba(57,214,255,.055) 0 1px,transparent 1px 24px),
+      repeating-linear-gradient(90deg,rgba(57,214,255,.055) 0 1px,transparent 1px 24px)}
+  .corner{position:absolute;width:22px;height:22px;border:0 solid var(--amber)}
+  .c1{left:8px;top:8px;border-left-width:4px;border-top-width:4px}
+  .c2{right:8px;top:8px;border-right-width:4px;border-top-width:4px}
+  .c3{left:8px;bottom:8px;border-left-width:4px;border-bottom-width:4px}
+  .c4{right:8px;bottom:8px;border-right-width:4px;border-bottom-width:4px}
+  .top{display:flex;align-items:center;gap:14px;padding:18px 24px 0}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--jade);
+    box-shadow:0 0 14px var(--jade);flex:0 0 auto}
+  .title{font-size:clamp(18px,3.2vw,34px);font-weight:700;letter-spacing:.12em}
+  .badge{margin-left:auto;font-size:12px;letter-spacing:.14em;color:#04121A;
+    background:var(--cyan);padding:5px 10px;border-radius:4px;font-weight:700}
+  .mid{flex:1;display:flex;align-items:center;justify-content:center;padding:12px 24px;min-height:0}
+  .size{font-size:clamp(30px,7.2vw,92px);font-weight:700;line-height:1;letter-spacing:.02em;
+    color:#fff;text-shadow:0 0 34px rgba(57,214,255,.45);white-space:nowrap}
+  .size small{font-size:.34em;color:var(--cyan);letter-spacing:.1em;vertical-align:.5em}
+  .bottom{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;
+    padding:0 24px 18px;font-size:clamp(11px,1.25vw,14px);color:#8FB9C9}
+  .k{color:var(--amber)}
+  .ok{color:var(--jade)}
+  .bad{color:var(--bad)}
+  .ruler{position:absolute;left:0;right:0;bottom:44px;height:8px;
+    background:repeating-linear-gradient(90deg,rgba(57,214,255,.55) 0 2px,transparent 2px 40px)}
+</style>
+</head>
+<body>
+  <div class="stage" id="stage">
+    <span class="corner c1"></span><span class="corner c2"></span>
+    <span class="corner c3"></span><span class="corner c4"></span>
+    <div class="top">
+      <span class="dot" id="dot"></span>
+      <span class="title">SPIKE · 原生子视图</span>
+      <span class="badge">WEBVIEW2 CHILD</span>
+    </div>
+    <div class="mid">
+      <div class="size" id="size">—<small> px</small></div>
+    </div>
+    <div class="bottom">
+      <span>DPR <b class="k" id="dpr">—</b></span>
+      <span>引擎 <b id="health">检测中…</b></span>
+      <span>视口 <b class="k" id="vp">—</b></span>
+      <span style="margin-left:auto">如果这页盖住了 HTML 浮层，说明原生视图在 z 序最上层</span>
+    </div>
+    <div class="ruler"></div>
+  </div>
+<script>
+  const size = document.getElementById("size");
+  const dpr = document.getElementById("dpr");
+  const vp = document.getElementById("vp");
+  const dot = document.getElementById("dot");
+  const health = document.getElementById("health");
+
+  function paint() {
+    const w = window.innerWidth, h = window.innerHeight;
+    size.innerHTML = w + " × " + h + "<small> px</small>";
+    dpr.textContent = String(window.devicePixelRatio || 1);
+    vp.textContent = w + "×" + h + " @" + (window.devicePixelRatio || 1) + "x";
+    document.title = "SPIKE STAGE " + w + "x" + h + " dpr=" + (window.devicePixelRatio || 1);
+  }
+  paint();
+  window.addEventListener("resize", paint);
+
+  // 子视图也是一个真实的网页上下文：确认它能访问本地引擎。
+  fetch("/api/health", { cache: "no-store" })
+    .then((r) => r.json())
+    .then((j) => {
+      health.textContent = j && j.ok ? "OK" : "异常";
+      health.className = j && j.ok ? "ok" : "bad";
+      dot.style.background = j && j.ok ? "var(--jade)" : "var(--amber)";
+    })
+    .catch((e) => {
+      health.textContent = "失败 " + String(e).slice(0, 40);
+      health.className = "bad";
+      dot.style.background = "var(--bad)";
+    });
+</script>
+</body>
+</html>

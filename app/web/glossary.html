@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>术语表 · 直播语记</title>
+<style>
+:root{--ink:#1d2330;--muted:#6b7480;--faint:#9aa3b0;--line:#e6e9ef;--accent:#2b5cff;--bg:#f4f6f9}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+ font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+.top{position:sticky;top:0;z-index:9;display:flex;align-items:center;gap:12px;padding:10px 18px;
+ background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top .brand{font-weight:700;font-size:13px}
+.top a{font-size:12.5px;color:var(--muted);text-decoration:none}
+.grow{flex:1}
+.wrap{max-width:860px;margin:0 auto;padding:28px 18px 120px}
+h1{font-size:21px;margin:0 0 8px}
+.lead{font-size:13px;color:var(--muted);line-height:1.9;margin:0 0 18px}
+.lead b{color:var(--ink)}
+.row{display:grid;grid-template-columns:170px 1fr 160px 34px;gap:8px;align-items:center;
+ background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px}
+.row input{font:inherit;font-size:13px;padding:7px 9px;border:1px solid #dfe4ec;border-radius:7px;width:100%}
+.row input.term{font-weight:700}
+.row .del{border:0;background:#fff;color:#b3261e;font-size:16px;cursor:pointer;padding:4px}
+.btn{font:inherit;font-size:13px;padding:8px 14px;border-radius:8px;border:1px solid #d8dde6;
+ background:#fff;cursor:pointer;color:#3c4757}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:hover{border-color:var(--accent)}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:18px 0 8px}
+.hint{font-size:12px;color:var(--faint)}
+.kw{margin-top:22px;font-size:12.5px;color:var(--muted);line-height:2}
+.kw b{color:var(--ink)}
+#status{font-size:12.5px;color:#0a7a4a;min-height:20px;margin-top:10px}
+select{font:inherit;font-size:12.5px;padding:7px 9px;border-radius:8px;border:1px solid #dfe4ec}
+@media(max-width:700px){.row{grid-template-columns:1fr;gap:6px}.row .del{justify-self:end}}
+</style>
+</head>
+<body>
+<div class="top" data-ln-region="topbar">
+  <span class="brand">直播语记 · 术语表</span>
+  <a href="/">← 首页</a>
+  <a href="/pushes">📣 推送记录</a>
+  <span class="grow"></span>
+  <a href="/reader" id="back">全文稿 ›</a>
+</div>
+<div class="wrap" data-ln-region="stage">
+  <h1>术语表</h1>
+  <p class="lead">
+    这里登记的词会做两件事：<b>识别后纠错</b>（F D E / fde → FDE，"欧匹西" → OPC）和
+    <b>检索时扩展</b>（搜「OPC政策」会拆成 OPC + 政策再找）。<br>
+    只影响"这个词怎么写、搜不搜得到"，不改变高光打分；<b>关注词会自动并进来</b>，
+    不用两边都配。
+  </p>
+  <div id="rows"></div>
+  <div class="toolbar">
+    <button class="btn" id="add">＋ 加一个术语</button>
+    <button class="btn primary" id="save">保存</button>
+    <span class="hint">别名用顿号或逗号分隔，比如：欧匹西、O P C</span>
+  </div>
+  <div id="status"></div>
+
+  <div class="toolbar" style="margin-top:26px;border-top:1px solid var(--line);padding-top:18px">
+    <span style="font-size:13px;color:var(--muted)">把纠错补到已有逐字稿：</span>
+    <select id="sess"><option value="">全部场次</option></select>
+    <button class="btn" id="reapply">跑一遍</button>
+    <span class="hint">人工校对过的句子会跳过</span>
+  </div>
+  <div id="reStatus" class="hint"></div>
+
+  <div class="kw" id="kw"></div>
+</div>
+<script>
+var S={terms:[],sessions:[]};
+function $(s){return document.querySelector(s)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function api(path,opt){return fetch(path,opt).then(function(r){return r.json().then(function(j){
+ if(!r.ok) throw new Error(j.error||('HTTP '+r.status)); return j;})})}
+
+function paint(){
+  $('#rows').innerHTML=S.terms.map(function(t,i){
+    return '<div class="row" data-i="'+i+'">'
+      +'<input class="term" data-k="term" value="'+esc(t.term)+'" placeholder="正确写法，如 OPC">'
+      +'<input data-k="aliases" value="'+esc((t.aliases||[]).join('、'))+'" placeholder="常见误听/写法，如 欧匹西、O P C">'
+      +'<input data-k="note" value="'+esc(t.note||'')+'" placeholder="备注（可空）">'
+      +'<button class="del" title="删除">×</button></div>';
+  }).join('')||'<p class="hint">还没有术语。加一个试试：FDE。</p>';
+  document.querySelectorAll('.row').forEach(function(row,i){
+    row.querySelectorAll('input').forEach(function(inp){
+      inp.oninput=function(){
+        var k=inp.dataset.k;
+        if(k==='aliases')S.terms[i].aliases=inp.value.split(/[、,，;；\s]+/).filter(Boolean);
+        else S.terms[i][k]=inp.value;
+      };
+    });
+    row.querySelector('.del').onclick=function(){S.terms.splice(i,1);paint()};
+  });
+}
+
+function load(){
+  return api('/api/glossary').then(function(j){
+    S.terms=j.terms||[]; paint();
+    $('#kw').innerHTML='<b>当前关注词</b>（自动并入术语，只做规范写法）：'+
+      ((j.keywords||[]).map(esc).join('、')||'还没有');
+  }).catch(function(e){$('#status').textContent='加载失败：'+e.message});
+}
+
+function loadSessions(){
+  return api('/api/sessions').then(function(j){
+    S.sessions=j.sessions||[];
+    $('#sess').innerHTML='<option value="">全部场次</option>'+S.sessions.map(function(s){
+      return '<option value="'+esc(s.id)+'">'+esc((s.title||s.id).slice(0,30))+'</option>';
+    }).join('');
+  }).catch(function(){});
+}
+
+function save(){
+  var terms=S.terms.filter(function(t){return (t.term||'').trim()});
+  api('/api/glossary',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({terms:terms})}).then(function(j){
+      S.terms=j.terms||[];paint();$('#status').textContent='已保存（下一句 ASR 就按新词走）';
+      setTimeout(function(){$('#status').textContent=''},2600);
+  }).catch(function(e){$('#status').textContent='保存失败：'+e.message});
+}
+
+function reapply(){
+  var sid=$('#sess').value;
+  $('#reStatus').textContent='跑着…';
+  api('/api/glossary/reapply',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({session_id:sid})}).then(function(j){
+      $('#reStatus').textContent='扫了 '+j.scanned+' 句，改了 '+j.changed+' 句';
+  }).catch(function(e){$('#reStatus').textContent='失败：'+e.message});
+}
+
+$('#add').onclick=function(){S.terms.push({term:'',aliases:[],note:''});paint();
+  var inputs=document.querySelectorAll('.row input.term');if(inputs.length)inputs[inputs.length-1].focus()};
+$('#save').onclick=save;
+$('#reapply').onclick=reapply;
+load();loadSessions();
+</script>
+</body>
+</html>

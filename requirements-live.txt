@@ -1,0 +1,10 @@
+# 实时监听（标签页音频）额外依赖；不装也不影响演示/回放/总结
+sherpa-onnx>=2.0.1
+numpy>=2.0
+# 采集代理按进程静音用（Windows 音量合成器那一层）。不装只是安静不了，
+# 采集照常——注意不能改用 Chrome 的 --mute-audio，那会把采集的音频一起掐掉。
+pycaw>=20240210; sys_platform == "win32"
+# 采集代理连 Chrome DevTools（CDP）走 WebSocket；浏览器采集模式必需。
+websockets>=12
+# 飞书机器人长连接与云文档（/周报 --doc、/复盘 --doc）。
+lark-oapi>=1.4

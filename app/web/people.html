@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>人物档案 · 直播语记</title>
+<style>
+:root{--ink:#1d2330;--muted:#6b7480;--faint:#9aa3b0;--line:#e6e9ef;--accent:#2b5cff;
+  --bg:#f4f6f9;--danger:#c0392b;--ok:#0a7a4a;--warn:#b26a00}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+.top{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:10px;padding:10px 18px;
+  background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top .brand{font-weight:700;font-size:13px}
+.top a{font-size:12.5px;color:var(--muted);text-decoration:none;padding:4px 8px;border-radius:7px}
+.top a:hover{background:#eef1f7;color:var(--ink)}
+.grow{flex:1}
+.wrap{max-width:1240px;margin:0 auto;padding:22px 18px 80px}
+h1{font-size:20px;margin:0 0 4px}
+.sub{font-size:12.5px;color:var(--muted);margin-bottom:16px;line-height:1.7}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.card b{display:block;font-size:19px;font-variant-numeric:tabular-nums}
+.card span{font-size:11.5px;color:var(--muted)}
+.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+input[type=text],input[type=search]{font:inherit;font-size:12.5px;padding:7px 10px;border:1px solid var(--line);
+  border-radius:8px;outline:none;background:#fff}
+input:focus{border-color:var(--accent)}
+button.act{font:inherit;font-size:11.5px;padding:5px 10px;border:1px solid var(--line);border-radius:7px;
+  background:#fff;color:#4a5464;cursor:pointer}
+button.act:hover{border-color:var(--accent);color:var(--accent)}
+button.act.primary{background:#eef3ff;border-color:#c3d3ff;color:#1d3ea8;font-weight:600}
+button.act.danger:hover{border-color:var(--danger);color:var(--danger)}
+.main{display:grid;grid-template-columns:320px 1fr;gap:14px;align-items:start}
+.panel{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.panel h3{margin:0;padding:11px 14px;font-size:12.5px;border-bottom:1px solid var(--line);
+  background:#fafbfc;color:var(--muted);font-weight:600}
+.plist{max-height:66vh;overflow:auto}
+.pitem{padding:10px 14px;border-bottom:1px solid #f4f6f9;cursor:pointer}
+.pitem:hover{background:#fafbff}
+.pitem.on{background:#eef3ff;box-shadow:inset 3px 0 0 var(--accent)}
+.pitem .nm{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+.pitem .mt{font-size:11.5px;color:var(--muted);margin-top:3px}
+.pitem .mt b{color:var(--ink);font-weight:600}
+.empty{padding:34px 14px;text-align:center;color:var(--faint);font-size:12.5px;line-height:1.8}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid #f1f3f7}
+th{font-size:11.5px;color:var(--muted);font-weight:600;background:#fafbfc}
+tr:last-child td{border-bottom:0}
+tr:hover td{background:#fafbff}
+td.t{font-weight:600;cursor:pointer}
+td.t:hover{color:var(--accent)}
+.num{font-variant-numeric:tabular-nums;color:var(--muted)}
+.tag{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:5px;font-weight:600;
+  vertical-align:1px}
+.tag.auto{background:#e8f6ee;color:var(--ok)}
+.tag.cand{background:#fdf3e2;color:var(--warn)}
+.tag.confirmed{background:#e8f0ff;color:#1d3ea8}
+.tag.rejected{background:#fdeaea;color:var(--danger)}
+.bar{display:inline-block;height:5px;border-radius:3px;background:#dfe6f5;width:52px;
+  vertical-align:middle;margin-right:6px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.detail{padding:14px}
+.dhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.dhead h2{margin:0;font-size:17px}
+.dmeta{font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.7}
+.hint{font-size:11.5px;color:var(--faint)}
+.toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);background:#1d2330;color:#fff;
+  padding:8px 16px;border-radius:8px;font-size:12.5px;z-index:99;display:none}
+.toast.show{display:block}
+@media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}.main{grid-template-columns:1fr}}
+@media(max-width:640px){
+  .top{padding:9px 12px;gap:6px}
+  .top .brand{white-space:nowrap;font-size:12px}
+  .top a{font-size:12px;padding:3px 5px;white-space:nowrap}
+  .top .hint{display:none}
+  .wrap{padding:16px 12px 60px}
+  h1{font-size:18px}
+  .sub{font-size:12px}
+  .toolbar input[type=search]{width:100%!important;flex:1 1 100%;font-size:16px;min-height:40px}
+  .toolbar button.act{min-height:36px}
+  .cards{grid-template-columns:repeat(2,1fr);gap:8px}
+  .card b{font-size:17px}
+  .plist{max-height:none}
+  .pitem{padding:11px 12px}
+  table{font-size:12px}
+  th,td{padding:8px 8px}
+  .bar{width:40px}
+  .detail{padding:12px}
+}
+</style>
+</head>
+<body>
+<script src="/static/js/embed.js"></script>
+<div class="top" data-ln-region="topbar">
+  <span class="brand">直播语记 · 人物档案</span>
+  <a href="/">← 返回主页</a>
+  <a href="/library">文件中心</a>
+  <span class="grow"></span>
+  <span class="hint" id="thr"></span>
+</div>
+
+<div class="wrap" data-ln-region="stage">
+  <h1>这个人到底在不在？</h1>
+  <div class="sub">
+    底库里的每个人都是一段声纹原型，来自你在任意一场里把说话人改成真实昵称的那一下——<b>改名即注册</b>，不用单独录音。<br>
+    每场结束后会用整场声纹自动复查一遍；命中只是「疑似」，点一下确认才算数，确认的同时又把新样本补进底库，越用越准。
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="toolbar">
+    <input type="search" id="q" placeholder="搜人名…" style="width:220px">
+    <button class="act primary" id="rematch">全部场次重新复查</button>
+    <span class="grow"></span>
+    <button class="act" id="refresh">刷新</button>
+  </div>
+
+  <div class="main">
+    <div class="panel">
+      <h3>底库 · <span id="pcount">0</span> 人</h3>
+      <div class="plist" id="plist"></div>
+    </div>
+    <div class="panel" id="dpanel">
+      <div class="empty" id="dempty">左边选一个人，看看他在哪些场次出现过</div>
+      <div class="detail" id="detail" style="display:none"></div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var S={persons:[],q:'',cur:'',detail:null,thr:{auto:0.18,candidate:0.08}};
+var $=function(s){return document.querySelector(s)};
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function fmt(t){t=Math.max(0,Math.floor(t||0));var h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60;
+  var p=function(n){return (n<10?'0':'')+n};
+  return h? h+':'+p(m)+':'+p(s) : p(m)+':'+p(s)}
+function fmtDur(t){t=Math.max(0,Math.round(t||0));var h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60;
+  var p=function(n){return (n<10?'0':'')+n};
+  return (h?h+':':'')+p(m)+':'+p(s)}
+function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show')},2600)}
+function api(p){return fetch(p).then(function(r){return r.json()})}
+function post(p,b){return fetch(p,{method:'POST',headers:{'Content-Type':'application/json'},
+  body:JSON.stringify(b||{})}).then(function(r){return r.json()})}
+
+/* 分数是「裸余弦 - 本场背景」，不是概率。展示时对照阈值给结论，不假装是准确率 */
+/* 以服务端判定为准：自动认定要同时过「归一化分」「裸余弦」「时长」三道门槛，
+   前端不要自己再算一遍，否则会出现「界面说高、库里记的是疑似」 */
+function verdict(score,state){
+  if(state==='confirmed')return ['confirmed','已确认'];
+  if(state==='rejected')return ['rejected','已否决'];
+  if(state==='auto')return ['auto','高'];
+  if(state==='cand')return ['cand','疑似'];
+  return ['','低'];
+}
+function bar(score){
+  var p=Math.max(0,Math.min(1,(score+0.05)/0.45));
+  return '<span class="bar"><i style="width:'+Math.round(p*100)+'%"></i></span>';
+}
+
+function renderCards(){
+  var n=S.persons.length,proto=0,hit=0,last='';
+  S.persons.forEach(function(p){proto+=p.n_protos||0;hit+=p.n_sessions||0;
+    if(p.last_seen&&p.last_seen>last)last=p.last_seen});
+  $('#cards').innerHTML=
+    '<div class="card"><b>'+n+'</b><span>底库里的人</span></div>'+
+    '<div class="card"><b>'+proto+'</b><span>声纹原型</span></div>'+
+    '<div class="card"><b>'+hit+'</b><span>累计命中场次</span></div>'+
+    '<div class="card"><b>'+(last?esc(last.slice(0,16).replace('T',' ')):'—')+'</b><span>最近一次出现</span></div>';
+  $('#pcount').textContent=n;
+  $('#thr').textContent='阈值：自动 '+S.thr.auto+' · 候选 '+S.thr.candidate;
+}
+
+function renderList(){
+  var q=S.q.trim().toLowerCase();
+  var rows=S.persons.filter(function(p){return !q||String(p.name||'').toLowerCase().indexOf(q)>=0});
+  if(!rows.length){
+    $('#plist').innerHTML='<div class="empty">'+(S.persons.length?'没有匹配的人':'底库还是空的。<br>去任意一场的「身份校正」里，<br>把某个说话人改成真实昵称即可注册。')+'</div>';
+    return;
+  }
+  $('#plist').innerHTML=rows.map(function(p){
+    return '<div class="pitem'+(p.person_id===S.cur?' on':'')+'" data-id="'+esc(p.person_id)+'">'
+      +'<div class="nm">'+esc(p.name)+'</div>'
+      +'<div class="mt"><b>'+(p.n_sessions||0)+'</b> 场 · <b>'+(p.n_protos||0)+'</b> 条原型 · '
+      +fmtDur(p.seconds||0)+'</div></div>';
+  }).join('');
+  Array.prototype.forEach.call($('#plist').querySelectorAll('.pitem'),function(el){
+    el.onclick=function(){openPerson(el.dataset.id)};
+  });
+}
+
+function renderDetail(){
+  var d=S.detail;if(!d){return}
+  var p=d.person,rows=p.appearances||[];
+  var body=rows.length?('<table><thead><tr><th>场次</th><th>日期</th><th>出现时段</th>'
+    +'<th>发言</th><th>置信</th><th>状态</th><th></th></tr></thead><tbody>'
+    +rows.map(function(r){
+      var v=verdict(r.person_score||0,r.person_state);
+      var sc=(r.person_score==null)?null:r.person_score;
+      var cell=sc==null? '<span style="color:var(--faint)">已登记</span>'
+        :'<span title="得分 = 整体余弦 '+(r.person_raw==null?'—':r.person_raw.toFixed(2))
+          +' − 本场背景 '+(r.person_bg==null?'—':r.person_bg.toFixed(2))+'">'
+          +bar(sc)+sc.toFixed(2)
+          +'<span style="color:var(--faint)"> / '+(r.person_raw==null?'—':r.person_raw.toFixed(2))+'</span></span>';
+      return '<tr>'
+        +'<td class="t" data-session="'+esc(r.session_id)+'" data-t="'+Math.max(0,Math.floor(r.t_from||0))+'">'+esc(r.title)+'</td>'
+        +'<td class="num">'+esc((r.started_at||'').slice(0,16).replace('T',' '))+'</td>'
+        +'<td class="num">'+fmt(r.t_from)+' ~ '+fmt(r.t_to)+'</td>'
+        +'<td class="num">'+(r.n||0)+' 句 · '+fmtDur(r.seconds||0)+'</td>'
+        +'<td class="num">'+cell+'</td>'
+        +'<td><span class="tag '+v[0]+'">'+v[1]+'</span></td>'
+        +'<td>'+(r.has_audio
+            ? '<button class="act" data-session="'+esc(r.session_id)+'" data-t="'+Math.max(0,Math.floor(r.t_from||0))+'">跳转</button>'
+            : '<span class="hint">无录音</span>')+'</td>'
+        +'</tr>';
+    }).join('')+'</tbody></table>')
+    : '<div class="empty">这个人还没在任何场次里出现过。<br>下次他一开口，结束时会自动冒出来。</div>';
+
+  $('#detail').innerHTML=
+    '<div class="dhead"><h2>'+esc(p.name)+'</h2>'
+    +'<span class="hint">'+esc(p.person_id)+'</span>'
+    +'<span class="grow"></span>'
+    +'<button class="act" id="btnRename">改名</button>'
+    +'<button class="act" id="btnMerge">合并到…</button>'
+    +'<button class="act danger" id="btnForget">从底库移除</button>'
+    +'</div>'
+    +'<div class="dmeta">'+(p.n_protos||0)+' 条声纹原型 · 出现在 <b>'+rows.length+'</b> 场 · 累计发言 '
+    +fmtDur(p.seconds||0)+'<br><span class="hint">置信 = 整体余弦减去本场背景；'
+    +'≥'+S.thr.auto+' 且整体余弦 ≥0.55 才自动认定，'+S.thr.candidate+'~'+S.thr.auto+' 需要你点一下确认。</span></div>'
+    +body;
+  $('#dempty').style.display='none';
+  $('#detail').style.display='';
+  Array.prototype.forEach.call($('#detail').querySelectorAll('[data-session]'),function(el){
+    el.onclick=function(){
+      location.href='/reader?session='+encodeURIComponent(el.dataset.session)
+        +'&t='+(el.dataset.t||0);
+    };
+  });
+  $('#btnRename').onclick=renamePerson;
+  $('#btnMerge').onclick=mergePerson;
+  $('#btnForget').onclick=forgetPerson;
+}
+
+async function openPerson(id){
+  S.cur=id;renderList();
+  var d=await api('/api/person?person_id='+encodeURIComponent(id));
+  if(!d.ok){toast(d.reason||d.error||'加载失败');return}
+  S.detail=d;renderDetail();
+}
+
+async function load(){
+  var d=await api('/api/persons');
+  S.persons=d.persons||[];if(d.thresholds)S.thr=d.thresholds;
+  renderCards();renderList();
+  if(S.cur){var still=S.persons.filter(function(p){return p.person_id===S.cur})[0];
+    if(still)openPerson(S.cur);else{S.cur='';S.detail=null;$('#detail').style.display='none';
+      $('#dempty').style.display=''}}
+}
+
+async function renamePerson(){
+  var p=S.detail.person;
+  var n=prompt('新的名字',p.name);
+  if(n==null)return;n=n.trim();if(!n||n===p.name)return;
+  var r=await post('/api/persons/rename',{person_id:p.person_id,name:n});
+  if(r.error){toast(r.error);return}
+  toast('已改名');await openPerson(p.person_id);await load();
+}
+
+async function mergePerson(){
+  var p=S.detail.person;
+  var others=S.persons.filter(function(x){return x.person_id!==p.person_id});
+  if(!others.length){toast('底库里没有别人可并');return}
+  var names=others.map(function(x,i){return (i+1)+'. '+x.name+'（'+x.n_sessions+' 场）'}).join('\n');
+  var pick=prompt('把「'+p.name+'」并到哪个人？输序号：\n\n'+names);
+  if(pick==null)return;
+  var i=parseInt(pick,10)-1;
+  if(isNaN(i)||!others[i]){toast('序号不对');return}
+  if(!confirm('合并后「'+p.name+'」的所有声纹原型和场次归属都会转到「'+others[i].name+'」，不可撤销。'))return;
+  await post('/api/persons/merge',{src_id:p.person_id,dst_id:others[i].person_id});
+  toast('已合并');S.cur=others[i].person_id;await load();
+}
+
+async function forgetPerson(){
+  var p=S.detail.person;
+  if(!confirm('把「'+p.name+'」从底库移除？\n\n声纹原型会一并删除，逐字稿里的文字不受影响。'))return;
+  await post('/api/persons/forget',{person_id:p.person_id});
+  toast('已移除');S.cur='';S.detail=null;$('#detail').style.display='none';
+  $('#dempty').style.display='';await load();
+}
+
+$('#q').oninput=function(e){S.q=e.target.value;renderList()};
+$('#refresh').onclick=load;
+$('#rematch').onclick=async function(){
+  var b=this;b.disabled=true;b.textContent='复查中…';
+  try{
+    var r=await post('/api/persons/rematch',{});
+    toast(r.ok?('复查完成：'+r.sessions_with_match+' 场有命中'):(r.reason||r.error||'失败'));
+    await load();
+  }catch(e){toast('失败：'+e.message)}
+  b.disabled=false;b.textContent='全部场次重新复查';
+};
+
+load().catch(function(e){$('#cards').innerHTML='<div class="card">加载失败：'+esc(e.message)+'</div>'});
+</script>
+</body>
+</html>

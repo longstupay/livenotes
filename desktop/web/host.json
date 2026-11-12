@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "host": "desktop",
+  "name": "LiveNotes 桌面版",
+  "css": [
+    "/static/css/paper.css",
+    "/static/css/desktop.css"
+  ],
+  "js": [
+    "/static/js/desktop.js"
+  ],
+  "profile": {
+    "host": "desktop",
+    "capabilities": [
+      "native-windows",
+      "tray",
+      "host-menu",
+      "host-search",
+      "capture-mode"
+    ],
+    "copy": {
+      "rooms.foot-hint": "临时抓一个标签页：桌面版没有浏览器标签页可抓，在「收听」里粘贴直播间链接，或用托盘「在浏览器中打开」用 Chrome 采。"
+    }
+  }
+}

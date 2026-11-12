@@ -1,0 +1,72 @@
+# ---- 本机运行数据：不进仓库 ----
+# 数据库、录音、日志、设置（可能含 LLM 密钥）
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+data/server.log
+data/settings.json
+data/settings.json.bak
+data/asr-*.json
+data/asr-*.md
+data/asr-*.log
+data/audio/
+data/clips/
+data/share/
+data/reports/
+data/trash/
+data/eval/
+# 引擎单实例锁与 engine.json（pid/端口/数据目录）：本机运行期事实
+data/runtime/
+
+# ---- 本地模型（约 270MB，用 python tools/fetch_models.py 下载）----
+models/
+*.onnx
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.env
+
+# ---- 编辑器 / 系统 ----
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+data/feishu.json
+data/profile.json
+data/rooms.json
+data/watch_trust.json
+.tmp/
+data/profiles/
+data/glossary.json
+
+# ---- 运行期产物：日志与一次性采样，都是本机事实，不进仓库 ----
+data/*.log
+data/spike*.csv
+debug.log
+data/_probe_*/
+data/_chrome_probe_*/
+# ---- 结构化日志：本机事实，不进仓库 ----
+data/logs/
+
+# ---- desktop shell ----
+desktop/node_modules/
+desktop/.build/
+desktop/src-tauri/target/
+desktop/src-tauri/boot.log
+desktop/src-tauri/resources/engine/
+desktop/src-tauri/resources/models/
+desktop/src-tauri/resources/ffmpeg/
+
+# ---- Claude Code 本机工作区：临时日志、下载物、worktree，不进仓库 ----
+.claude/tmp/
+.claude/worktrees/
+.claude/settings.local.json
+
+# ---- 本机运行数据：整个 data/ 都不进仓库 ----
+data/

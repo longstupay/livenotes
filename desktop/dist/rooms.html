@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LiveNotes · 多房间采集 Spike</title>
+<style>
+  :root{--ink:#1d2330;--muted:#6b7480;--line:#e1e6ee;--accent:#2b5cff;--bad:#b3261e;--ok:#0a7a4a;--bg:#f4f6f9}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+  header{position:fixed;left:0;right:0;top:0;height:128px;z-index:10;background:#fff;
+    border-bottom:1px solid var(--line);padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+  .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .brand{font-weight:700;font-size:14px;margin-right:8px}
+  .hint{font-size:11.5px;color:var(--muted)}
+  input[type=text]{font:inherit;font-size:12px;padding:5px 8px;border:1px solid var(--line);
+    border-radius:7px;background:#fbfcfe;min-width:300px;flex:1}
+  button{font:inherit;font-size:11.5px;padding:5px 10px;border-radius:7px;border:1px solid #d9dfe9;
+    background:#fff;color:#465062;cursor:pointer}
+  button:hover{border-color:var(--accent);color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.primary:hover{filter:brightness(1.06);color:#fff}
+  button.danger:hover{border-color:var(--bad);color:var(--bad)}
+  .pill{font-size:11px;padding:2px 8px;border-radius:999px;background:#eef2fa;color:#4a5464;
+    font-variant-numeric:tabular-nums}
+  .pill.ok{background:#e8f6ee;color:var(--ok)}
+  .pill.bad{background:#fdecea;color:var(--bad)}
+  .status{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  #stage{position:fixed;left:0;right:0;top:128px;bottom:0;pointer-events:none}
+  .caption{position:absolute;left:12px;bottom:8px;font-size:11px;color:var(--muted);pointer-events:none}
+</style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <span class="brand">多房间采集 Spike</span>
+    <span class="pill" id="session-pill">未建会话</span>
+    <span class="pill" id="capture-pill">捕获未开</span>
+    <span class="hint">远程页面 → captureStream → WebView2 postMessage → Engine /api/live/chunk</span>
+  </div>
+  <div class="row">
+    <span class="hint">房间 A</span>
+    <input type="text" id="url-a" value="http://127.0.0.1:8899/room/a">
+    <button class="primary" id="btn-open-a">建会话并打开 A</button>
+    <button id="btn-mute-a">静音 A</button>
+    <button class="danger" id="btn-close-a">关闭 A</button>
+  </div>
+  <div class="row">
+    <span class="hint">房间 B</span>
+    <input type="text" id="url-b" value="http://127.0.0.1:8899/room/b">
+    <button id="btn-open-b">打开 B（验证共用登录）</button>
+    <button class="danger" id="btn-close-b">关闭 B</button>
+    <button id="btn-live">打开实时字幕</button>
+    <button id="btn-stop">停止会话</button>
+  </div>
+  <div class="status" id="status">就绪。先启动本地测试站：python desktop/test/site_server.py</div>
+</header>
+<div id="stage"><div class="caption">子 WebView2 视图会覆盖此区域（原生子窗口，z-order 在 HTML 之上）</div></div>
+
+<script>
+const invoke = (cmd, args) => window.__TAURI__.core.invoke(cmd, args);
+const $ = (id) => document.getElementById(id);
+let sid = "";
+let mutedA = false;
+
+function setStatus(text) { $("status").textContent = text; }
+function pill(id, text, cls) {
+  const el = $(id); el.textContent = text; el.className = "pill" + (cls ? " " + cls : "");
+}
+
+function layout() {
+  const y = 132, gap = 6, w = (window.innerWidth - gap * 3) / 2, h = window.innerHeight - y - gap;
+  invoke("room_layout", { label: "room-a", x: gap, y, w, h }).catch(() => {});
+  invoke("room_layout", { label: "room-b", x: gap * 2 + w, y, w, h }).catch(() => {});
+}
+window.addEventListener("resize", layout);
+
+async function openA() {
+  try {
+    const title = "Spike · 测试站 A";
+    setStatus("正在创建引擎会话…");
+    sid = await invoke("live_start", { title });
+    pill("session-pill", "会话 " + sid.slice(0, 10) + "…", "ok");
+    const url = $("url-a").value.trim();
+    const w = (window.innerWidth - 18) / 2;
+    await invoke("room_open", {
+      label: "room-a", url, sid,
+      x: 6, y: 132, w, h: window.innerHeight - 138
+    });
+    pill("capture-pill", "A 已打开", "ok");
+    setStatus("房间 A 已打开；页面右上角应出现「LiveNotes · 采集中」。");
+  } catch (e) {
+    pill("session-pill", "失败", "bad");
+    setStatus("打开 A 失败：" + e);
+  }
+}
+
+async function openB() {
+  try {
+    const url = $("url-b").value.trim();
+    const w = (window.innerWidth - 18) / 2;
+    await invoke("room_open", {
+      label: "room-b", url, sid: "",
+      x: w + 12, y: 132, w, h: window.innerHeight - 138
+    });
+    setStatus("房间 B 已打开；两个房间应显示同一个 demo_login cookie。");
+  } catch (e) {
+    setStatus("打开 B 失败：" + e);
+  }
+}
+
+async function close(label) {
+  try { await invoke("room_close", { label }); } catch (e) {}
+}
+
+async function probe() {
+  if (!sid) return;
+  try {
+    const data = await invoke("live_probe", { sid });
+    const st = data.status || {};
+    const rows = (data.utterances && data.utterances.rows) || [];
+    const last = rows.length ? rows[rows.length - 1].text : "";
+    const stats = await invoke("room_stats");
+    const a = stats.find(x => x.room === "room-a") || {};
+    pill("capture-pill", a.chunks ? ("A 已送 " + a.chunks + " 块") : "等待音频块", a.chunks ? "ok" : "");
+    setStatus(
+      "running=" + st.running +
+      " · n_utterances=" + (st.n_utterances ?? "?") +
+      " · last_chunk_ago_s=" + (st.last_chunk_ago_s ?? "?") +
+      " · 最近字幕：" + (last || "（还没有）")
+    );
+  } catch (e) {
+    setStatus("探针失败：" + e);
+  }
+}
+setInterval(probe, 2000);
+
+$("btn-open-a").onclick = openA;
+$("btn-open-b").onclick = openB;
+$("btn-close-a").onclick = () => close("room-a");
+$("btn-close-b").onclick = () => close("room-b");
+$("btn-mute-a").onclick = async () => {
+  mutedA = !mutedA;
+  try {
+    await invoke("room_mute", { label: "room-a", muted: mutedA });
+    $("btn-mute-a").textContent = mutedA ? "取消静音 A" : "静音 A";
+    setStatus(mutedA ? "A 已静音：扬声器应无声，但 RMS/字幕应继续。" : "A 已取消静音。");
+  } catch (e) { setStatus("静音失败：" + e); }
+};
+$("btn-live").onclick = async () => {
+  if (!sid) { setStatus("先打开 A 建会话。"); return; }
+  try { await invoke("live_open_view", { sid }); } catch (e) { setStatus("打开字幕失败：" + e); }
+};
+$("btn-stop").onclick = async () => {
+  if (!sid) return;
+  try {
+    await invoke("live_stop", { sid });
+    pill("session-pill", "已停止", "");
+    setStatus("会话已停止。");
+  } catch (e) { setStatus("停止失败：" + e); }
+};
+
+setTimeout(layout, 300);
+</script>
+</body>
+</html>

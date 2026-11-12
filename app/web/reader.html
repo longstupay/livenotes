@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>全文稿 · 直播语记</title>
+<style>
+:root{
+  --ink:#1d2330; --muted:#6b7480; --faint:#9aa3b0; --line:#e6e9ef;
+  --accent:#2b5cff; --paper:#ffffff; --bg:#f4f6f9;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+a{color:inherit}
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;
+  padding:10px 18px;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line)}
+.top .brand{font-weight:700;font-size:13px;letter-spacing:.2px}
+.top .back{font-size:12.5px;color:var(--muted);text-decoration:none;padding:4px 8px;border-radius:7px}
+.top .back:hover{background:#eef1f7;color:var(--ink)}
+.grow{flex:1}
+.top button{font:inherit;font-size:12px;padding:5px 11px;border-radius:8px;cursor:pointer;
+  border:1px solid #d8dde6;background:#fff;color:#3c4757}
+.top button:hover{border-color:var(--accent);color:var(--accent)}
+.wrap{max-width:760px;margin:0 auto;padding:34px 22px 140px}
+.doc-head{margin-bottom:18px}
+h1{font-size:23px;line-height:1.45;margin:0 0 8px;letter-spacing:.2px}
+.meta{font-size:12.5px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.meta .sep{color:#cfd5de}
+.stats{margin-top:12px;font-size:11.5px;color:var(--faint)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:20px 0 6px;
+  padding:10px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:4px 10px;
+  border:1px solid #dde2ea;border-radius:999px;background:#fff;cursor:pointer;color:#4a5464}
+.chip .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.chip.on{background:#eef3ff;border-color:#c3d3ff;color:#1d3ea8}
+.chip.off{opacity:.45}
+.opt{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:6px;margin-left:auto}
+article{padding-top:10px}
+.p{position:relative;margin:0 0 14px;padding:12px 0 12px 16px;border-left:3px solid transparent;
+  border-radius:0 8px 8px 0;cursor:pointer;transition:background .12s}
+.p:hover{background:#f7f9ff}
+.p.on{background:#eef3ff}
+.p .ph{display:flex;align-items:baseline;gap:10px;margin-bottom:3px}
+.p .who{font-size:12.5px;font-weight:700}
+.p .when{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;opacity:0;transition:opacity .12s}
+.p:hover .when,.p.on .when{opacity:1}
+.p p{margin:0;font-size:16.5px;line-height:2;letter-spacing:.01em;word-break:break-word;
+  text-align:justify;text-justify:inter-ideograph}
+.p.low p{color:#6b7480}
+.pnote{margin-top:6px;font-size:11.5px;color:#0a7a4a;display:none}
+.seg{display:none;margin:10px 0 0;border:1px solid var(--line);border-radius:9px;overflow:hidden;width:max-content}
+.seg.show{display:inline-flex}
+.seg button{border:0;background:#fff;padding:6px 14px;font-size:12px;cursor:pointer;color:#4a5464;
+  border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:#eef3ff;color:var(--accent);font-weight:600}
+.dl{font-size:15.5px;line-height:1.9;margin:0 0 2px;word-break:break-word}
+.dl .tag{display:inline-block;font-size:10.5px;padding:0 6px;border-radius:4px;margin-right:8px;
+  color:#8b94a6;background:#f1f3f7;vertical-align:2px}
+.del{color:#b3261e;background:#fdeceb;text-decoration:line-through;text-decoration-thickness:1px;
+  border-radius:2px;padding:0 1px}
+.ins{color:#0a7a4a;background:#eaf7f0;border-radius:2px;padding:0 1px}
+.chg{font-size:10.5px;color:#8b94a6;margin-left:8px;font-variant-numeric:tabular-nums}
+.chg .m{color:#b3261e}
+.chg .p{color:#0a7a4a}
+.pnote.show{display:block}
+.empty{padding:60px 0;text-align:center;color:var(--faint);font-size:13px;line-height:2}
+.editbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 14px;
+  padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:12.5px}
+.editbar .chip{pointer-events:none}
+.editbar select,.eu select{font:inherit;font-size:12.5px;padding:5px 7px;border:1px solid #dfe4ec;
+  border-radius:7px;background:#fff;max-width:150px}
+.eu{margin:0 0 10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.eu .euh{display:flex;gap:10px;align-items:center;margin-bottom:6px}
+.eu .euh .when{font-size:11.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+.eu .saved{font-size:11.5px;color:#0a7a4a;margin-left:auto}
+.eu textarea{width:100%;font:inherit;font-size:15px;line-height:1.75;border:1px solid #e6e9ef;
+  border-radius:8px;padding:8px 10px;resize:vertical;min-height:54px;background:#fcfdff}
+.eu.dirty textarea{border-color:#c3d3ff;background:#f7f9ff}
+.eu.dirty .saved{color:#a15c00}
+.editbar button{font:inherit;font-size:12px;padding:5px 10px;border-radius:7px;
+  border:1px solid #d8dde6;background:#fff;cursor:pointer;color:#3c4757}
+.editbar button:hover{border-color:var(--accent);color:var(--accent)}
+.player{position:fixed;left:0;right:0;bottom:0;display:none;align-items:center;gap:12px;
+  padding:10px 18px;background:rgba(20,26,38,.94);color:#dfe5ef;backdrop-filter:blur(8px)}
+.player.show{display:flex}
+.player button{width:34px;height:34px;border-radius:50%;border:1px solid #33415a;background:#243044;
+  color:#fff;cursor:pointer;font-size:13px}
+.player .t{font-size:11.5px;font-variant-numeric:tabular-nums;color:#9fb0c8;min-width:44px;text-align:center}
+.player input[type=range]{flex:1;accent-color:#4a6cff}
+.err{color:#c0392b;font-size:13px;padding:40px 0}
+@media(max-width:640px){
+  .top{padding:8px 10px;gap:6px;flex-wrap:wrap;row-gap:6px}
+  .top .brand{white-space:nowrap;font-size:12px;flex:none}
+  .top .back{white-space:nowrap;font-size:12px}
+  .top .grow{flex-basis:100%;height:0}
+  .top button{white-space:nowrap;font-size:11.5px;padding:5px 9px;min-height:32px}
+  #btnRepolish{margin-right:0}
+  .wrap{padding:18px 14px 120px}
+  h1{font-size:19px}
+  .p p{font-size:15.5px}
+  .p .when{opacity:1}
+  .filters{gap:6px}
+  .chip{min-height:30px}
+  .opt{margin-left:0}
+  .player{padding:8px 12px calc(8px + env(safe-area-inset-bottom))}
+}
+</style>
+</head>
+<body>
+<script src="/static/js/embed.js"></script>
+<div class="top" data-ln-region="topbar">
+  <span class="brand">直播语记 · 全文稿</span>
+  <a class="back" href="/" id="back">← 返回</a>
+  <span class="grow"></span>
+  <div class="seg" id="polishModes">
+    <button data-m="orig">原文</button><button data-m="polished">润色</button><button data-m="diff">对照</button>
+  </div>
+  <a id="btnRepolish" style="display:none;cursor:pointer;font-size:12px;color:var(--muted);margin-right:8px"
+     title="换模型或觉得上一版不好时，重新跑一遍">重新润色</a>
+  <a id="btnHi" class="back" style="font-size:12px" title="这场最值得听的是哪几段">🔥 高光榜</a>
+  <a class="back" style="font-size:12px" id="btnEdit" title="逐句改字、改判说话人、合并说话人">✎ 校对</a>
+  <a class="back" style="font-size:12px" href="/pushes" title="推了什么、没推为什么">📣 推送</a>
+  <a class="back" style="font-size:12px" href="/glossary" title="术语纠错与检索">📚 术语</a>
+  <button id="btnPolish" title="用大模型把口语整理成通顺的话（原文不会改）">✨ 润色本文</button>
+  <button id="btnRename">✎ 改标题</button>
+  <button id="btnMd">⬇ 纪要</button>
+  <button id="btnSrt">⬇ 字幕</button>
+</div>
+
+<div class="wrap" data-ln-region="stage">
+  <div class="doc-head">
+    <h1 id="title">加载中…</h1>
+    <div class="meta" id="meta"></div>
+    <div class="stats" id="stats"></div>
+    <div class="pnote" id="polishNote"></div>
+  </div>
+  <div class="filters" id="filters"></div>
+  <article id="body"></article>
+</div>
+
+<div class="player" id="player">
+  <button id="play">▶</button>
+  <span class="t" id="cur">00:00</span>
+  <input type="range" id="seek" min="0" max="1000" value="0">
+  <span class="t" id="dur">00:00</span>
+</div>
+<audio id="audio" preload="metadata"></audio>
+
+<script>
+var COLORS=['#2b5cff','#00a870','#d48806','#e5484d','#7c3aed','#08979c','#c41d7f','#597ef7','#fa8c16','#8c8c8c'];
+var S={sid:'',data:null,audio:null,paras:[],cur:-1,speakers:[],excludeLow:false,
+         polished:null,showPolished:false,polishEngine:'',mode:'orig',stats:null,seekT:0,
+         edit:false,utts:[]};
+var $=function(s){return document.querySelector(s)};
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function fmt(t){t=Math.max(0,Math.floor(t));var h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60;
+  var p=function(n){return (n<10?'0':'')+n};
+  return h? h+':'+p(m)+':'+p(s) : p(m)+':'+p(s)}
+/* 时间码只有"录音第几秒"，对不上任何人的表。title 里补一份墙钟：
+   用 started_utc（绝对时间）换算北京与 UTC；老场次没有时按本机时区解释。 */
+var WALL={at:null};
+function wallInit(s){
+  if(!s) return;
+  var raw=s.started_utc||s.started_at; if(!raw) return;
+  var d=new Date(raw); if(!isNaN(d.getTime())) WALL.at=d;
+}
+function wallFmt(d,tz){
+  try{
+    var parts=new Intl.DateTimeFormat('zh-CN',{timeZone:tz,hour12:false,month:'2-digit',
+      day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).formatToParts(d);
+    var o={}; parts.forEach(function(x){o[x.type]=x.value});
+    return o.month+'-'+o.day+' '+o.hour+':'+o.minute+':'+o.second;
+  }catch(e){ return '' }
+}
+function wallTitle(t){
+  if(!WALL.at) return '';
+  var d=new Date(WALL.at.getTime()+Math.max(0,t||0)*1000);
+  var bj=wallFmt(d,'Asia/Shanghai'), utc=wallFmt(d,'UTC');
+  return (bj&&utc)?('北京 '+bj+' / UTC '+utc):'';
+}
+function colorOf(id){var n=parseInt(String(id).replace(/\D/g,''),10)||0;return COLORS[n%COLORS.length]}
+
+function qs(){var m=/[?&]session=([^&]*)/.exec(location.search);return m?decodeURIComponent(m[1]):''}
+/* ?t=123 —— 从人物档案页点「跳转」时，直接定位到这个人开口的那一刻 */
+function qt(){var m=/[?&]t=([^&]*)/.exec(location.search);return m?(parseFloat(m[1])||0):0}
+
+var PUNCT='，。！？；：、,.!?;:';
+function tokenize(s){
+  var out=[],cur='';
+  for(var i=0;i<s.length;i++){
+    var ch=s[i];cur+=ch;
+    if(PUNCT.indexOf(ch)>=0){out.push(cur);cur='';}
+  }
+  if(cur)out.push(cur);
+  return out;
+}
+/* 先按标点切块再做 LCS：中文没有空格，纯按字 diff 会碎成"我/我/我" */
+function diffChunks(a,b){
+  var A=tokenize(a||''),B=tokenize(b||'');
+  if(!A.length&&!B.length)return [];
+  if(A.length*B.length>250000)return [['del',a||''],['ins',b||'']];
+  var n=A.length,m=B.length,dp=[],i,j;
+  for(i=0;i<=n;i++){dp.push(new Array(m+1).fill(0))}
+  for(i=n-1;i>=0;i--)for(j=m-1;j>=0;j--){
+    dp[i][j]=(A[i]===B[j])?dp[i+1][j+1]+1:Math.max(dp[i+1][j],dp[i][j+1]);
+  }
+  var ops=[];i=0;j=0;
+  while(i<n&&j<m){
+    if(A[i]===B[j]){ops.push(['same',A[i]]);i++;j++}
+    else if(dp[i+1][j]>=dp[i][j+1]){ops.push(['del',A[i]]);i++}
+    else{ops.push(['ins',B[j]]);j++}
+  }
+  while(i<n){ops.push(['del',A[i++]])}
+  while(j<m){ops.push(['ins',B[j++]])}
+  return ops;
+}
+function paintNote(){
+  var el=$('#polishNote');
+  var txt='';
+  if(S.mode==='diff'&&S.stats){
+    var rate=S.stats.chars?Math.round(S.stats.del/S.stats.chars*100):0;
+    txt='对照：共删 '+S.stats.del+' 字、增 '+S.stats.ins+' 字（删除率 '+rate+'%）· 原文未改动';
+  }else if(S.mode==='polished'&&S.polished){
+    txt='当前显示 AI 润色（'+(S.polishEngine||'')+'）· 原文未改动，切「原文」随时对照';
+  }
+  el.textContent=txt;
+  el.classList.toggle('show',!!txt);
+}
+function paintSeg(){
+  var seg=$('#polishModes');
+  seg.classList.toggle('show',!!S.polished);
+  Array.prototype.forEach.call(seg.querySelectorAll('button'),function(b){
+    b.classList.toggle('on',b.dataset.m===S.mode);
+  });
+  $('#btnPolish').style.display=S.polished?'none':'';
+  $('#btnRepolish').style.display=S.polished?'inline':'none';
+}
+function setMode(m){
+  if(!S.polished){ togglePolish(); return }
+  S.mode=m;render();paintSeg();
+}
+async function togglePolish(force){
+  if(S.polished&&!force){ setMode(S.mode==='orig'?'polished':'orig');return }
+  var b=$('#btnPolish'), link=$('#btnRepolish');
+  b.disabled=true;b.textContent='润色中…';link.style.display='none';
+  try{
+    var r=await fetch('/api/polish',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({session_id:S.sid,force:!!force})}).then(function(x){return x.json()});
+    if(!r.ok){ toastOnHost(r.error||r.reason||'润色失败'); return }
+    var m={};
+    (r.paragraphs||[]).forEach(function(x){if(x&&x.i!=null)m[x.i]=x.text});
+    S.polished=m;S.polishEngine=r.engine||'';
+    S.mode='diff';                      // 润完直接看对照，方便评估模型
+    render();paintSeg();
+    toastOnHost('润色完成：'+(r.paragraphs||[]).length+' 段（原文未改动）');
+  }catch(e){ toastOnHost('润色失败：'+e.message) }
+  finally{ b.disabled=false;paintSeg() }
+}
+function render(){
+  var d=S.data; if(!d) return;
+  $('#title').textContent=d.session.title;
+  document.title=d.session.title+' · 全文稿';
+  var st=d.session.started_at?d.session.started_at.replace('T',' '):'';
+  var bits=[];
+  if(st) bits.push('<span title="'+esc('开始于 '+wallTitle(0))+'">'+esc(st.slice(0,16))+'</span>');
+  bits.push('<span>时长 '+fmt(d.session.duration_s||0)+'</span>');
+  bits.push('<span>'+(d.speakers||[]).length+' 位说话人</span>');
+  bits.push('<span>id '+esc(d.session.id)+'</span>');
+  $('#meta').innerHTML=bits.join('<span class="sep">·</span>');
+  var s=d.stats||{};
+  $('#stats').textContent=[s.paragraphs+' 段', s.utterances+' 句', '约 '+s.chars+' 字',
+    s.chars_per_min?('语速 '+s.chars_per_min+' 字/分'):''].filter(Boolean).join(' · ');
+
+  if(S.edit){ $('#filters').innerHTML=''; renderEdit(); return; }
+
+  var f=$('#filters');
+  var chips=(d.speakers||[]).map(function(p){
+    var on=S.speakers.length===0||S.speakers.indexOf(p.speaker_id)>=0;
+    return '<span class="chip '+(on?'on':'off')+'" data-sp="'+esc(p.speaker_id)+'">'
+      +'<i class="dot" style="background:'+colorOf(p.speaker_id)+'"></i>'+esc(p.label)
+      +' '+fmt(p.seconds||0)+'</span>';
+  }).join('');
+  f.innerHTML=chips+'<label class="opt"><input type="checkbox" id="low"'+(S.excludeLow?' checked':'')
+    +'> 隐藏闲聊/广告</label>';
+  Array.prototype.forEach.call(f.querySelectorAll('.chip'),function(el){
+    el.onclick=function(){
+      var id=el.dataset.sp, i=S.speakers.indexOf(id);
+      if(i>=0) S.speakers.splice(i,1); else S.speakers.push(id);
+      if(S.speakers.length===S.data.speakers.length) S.speakers=[];
+      load();
+    };
+  });
+  $('#low').onchange=function(e){S.excludeLow=e.target.checked;load()};
+
+  var body=$('#body');
+  if(!d.paragraphs.length){
+    body.innerHTML='<div class="empty">这一场没有可读的正文<br>试试取消说话人筛选，或关闭「隐藏闲聊/广告」</div>';
+    return;
+  }
+  var totalDel=0,totalIns=0,totalChars=0;
+  body.innerHTML=d.paragraphs.map(function(p,i){
+    var c=colorOf(p.speaker_id);
+    var head='<div class="ph"><span class="who" style="color:'+c+'">'+esc(p.label)+'</span>'
+      +'<span class="when" title="'+esc(wallTitle(p.t_start))+'">'+fmt(p.t_start)+'–'+fmt(p.t_end)+'</span>';
+    var txt=p.text, cls='', attr='', inner='<p'+attr+'>'+esc(txt)+'</p>';
+    var pol=(S.polished&&S.polished[i]!=null)?S.polished[i]:null;
+
+    if(S.mode==='polished'&&pol){
+      inner='<p title="原文：'+esc(p.text)+'">'+esc(pol)+'</p>';
+      cls=' pol';
+    }else if(S.mode==='diff'&&pol){
+      var ops=diffChunks(p.text,pol);
+      var del=0,ins=0,oldHtml='',newHtml='';
+      ops.forEach(function(o){
+        if(o[0]==='same'){oldHtml+=esc(o[1]);newHtml+=esc(o[1]);}
+        else if(o[0]==='del'){del+=o[1].length;oldHtml+='<del class="del">'+esc(o[1])+'</del>';}
+        else{ins+=o[1].length;newHtml+='<ins class="ins">'+esc(o[1])+'</ins>';}
+      });
+      totalDel+=del;totalIns+=ins;totalChars+=p.text.length;
+      cls=' diff';
+      head+='<span class="chg"><span class="m">−'+del+'</span> / <span class="p">+'+ins+'</span> 字</span>';
+      inner='<p class="dl"><span class="tag">原文</span>'+oldHtml+'</p>'
+           +'<p class="dl"><span class="tag">润色</span>'+newHtml+'</p>';
+    }
+    if(S.mode!=='diff'&&p.low)cls+=' low';
+    return '<section class="p'+cls+'" data-i="'+i+'" data-t="'+p.t_start+'" '
+      +'style="border-left-color:'+c+'">'+head+'</div>'+inner+'</section>';
+  }).join('');
+  S.stats={del:totalDel,ins:totalIns,chars:totalChars};
+  paintNote();
+  Array.prototype.forEach.call(body.querySelectorAll('.p'),function(el){
+    el.onclick=function(){seekTo(parseFloat(el.dataset.t),true)};
+  });
+  S.paras=d.paragraphs;
+  markCurrent(null);
+}
+
+/* ---------------- 校对：改字 / 改判说话人 / 合并说话人 ---------------- */
+function postJson(url,body){
+  return fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){
+      if(!r.ok) throw new Error(j.error||('HTTP '+r.status)); return j;})});
+}
+function spkOptions(u){
+  var seen={}, out='';
+  (S.data.speakers||[]).forEach(function(p){
+    seen[p.speaker_id]=1;
+    out+='<option value="'+esc(p.speaker_id)+'"'+(p.speaker_id===u.speaker_id?' selected':'')+'>'
+      +esc(p.label)+'</option>';
+  });
+  if(u.speaker_id&&!seen[u.speaker_id]){
+    out='<option value="'+esc(u.speaker_id)+'" selected>'+esc(u.speaker_label||u.speaker_id)+'</option>'+out;
+  }
+  return out+'<option value="__new__">＋ 新建说话人…</option>';
+}
+function renderEdit(){
+  var body=$('#body'), spk=S.data.speakers||[];
+  var opts=spk.map(function(p){
+    return '<option value="'+esc(p.speaker_id)+'">'+esc(p.label)+'</option>';
+  }).join('');
+  var bar='<div class="editbar"><b>说话人</b>'
+    +spk.map(function(p){
+      return '<span class="chip on">'+esc(p.label)+' '+fmt(p.seconds||0)+'</span>';
+    }).join('')
+    +'<span class="grow"></span>'
+    +'<select id="mA">'+opts+'</select><span>并到</span>'
+    +'<select id="mB">'+opts+'</select>'
+    +'<button class="btn" id="btnMerge">合并</button></div>';
+  var rows=(S.utts||[]).map(function(u){
+    return '<div class="eu" data-id="'+u.id+'">'
+      +'<div class="euh"><span class="when" title="'+esc(wallTitle(u.t_start))+'">'+fmt(u.t_start)+'</span>'
+      +'<select class="spk">'+spkOptions(u)+'</select><span class="saved"></span></div>'
+      +'<textarea spellcheck="false">'+esc(u.text)+'</textarea></div>';
+  }).join('')||'<div class="empty">没有可校对的句子</div>';
+  body.innerHTML=bar
+    +'<div class="hint" style="font-size:12px;color:#9aa3b0;margin:0 0 12px">'
+    +'改字/改判后，总结与高光要重新生成才会用新文本；重聚类不会覆盖你改过的句子。</div>'
+    +rows;
+  var bm=$('#btnMerge'); if(bm) bm.onclick=mergeSpeakers;
+  Array.prototype.forEach.call(body.querySelectorAll('.eu'),function(el){
+    var id=Number(el.dataset.id);
+    var u=(S.utts||[]).filter(function(x){return x.id===id})[0];
+    if(!u) return;
+    var ta=el.querySelector('textarea'), orig=ta.value, saved=el.querySelector('.saved');
+    ta.oninput=function(){ el.classList.toggle('dirty',ta.value!==orig) };
+    ta.onblur=function(){
+      var v=ta.value.trim();
+      if(!v||v===orig) return;
+      postJson('/api/utterances/update',{session_id:S.sid,id:id,text:v}).then(function(r){
+        u.text=v; el.classList.remove('dirty'); saved.textContent='已保存';
+        setTimeout(function(){saved.textContent=''},2000);
+        toastOnHost('已保存；重新生成总结后生效');
+      }).catch(function(e){ toastOnHost('保存失败：'+e.message) });
+    };
+    ta.onkeydown=function(e){
+      if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){ e.preventDefault(); ta.blur() }
+    };
+    el.querySelector('.spk').onchange=function(){
+      var sel=this, v=sel.value;
+      if(v==='__new__'){
+        var name=prompt('新说话人的名字','新说话人');
+        if(!name){ sel.value=u.speaker_id; return }
+        reassign(u,'__new__',name.trim());
+      } else {
+        reassign(u,v,sel.options[sel.selectedIndex].text);
+      }
+    };
+  });
+}
+function reassign(u,spk,label){
+  postJson('/api/utterances/reassign',{session_id:S.sid,utterance_id:u.id,
+    speaker_id:spk,label:label}).then(function(r){
+      S.speakers=[];   // 新建/改判后旧的筛选会漏掉新人，先恢复成全选
+      toastOnHost('已改判为「'+r.label+'」'); load();
+    }).catch(function(e){ toastOnHost('改判失败：'+e.message) });
+}
+function mergeSpeakers(){
+  var a=$('#mA'), b=$('#mB');
+  if(!a||!b) return;
+  var av=a.value, bv=b.value;
+  if(!av||!bv||av===bv) return toastOnHost('选两个不同的说话人');
+  var an=a.options[a.selectedIndex].text, bn=b.options[b.selectedIndex].text;
+  if(!confirm('把「'+an+'」并到「'+bn+'」？合并后不可撤销。')) return;
+  postJson('/api/speakers/merge',{session_id:S.sid,src_ids:[av],
+    target_id:bv,target_label:bn}).then(function(r){
+      S.speakers=[];   // 被并掉的 id 还在筛选里会导致正文看起来空了
+      toastOnHost('已合并 '+r.merged+' 句'); load();
+    }).catch(function(e){ toastOnHost('合并失败：'+e.message) });
+}
+function loadEdit(){
+  fetch('/api/utterances?session_id='+encodeURIComponent(S.sid)+'&limit=5000')
+    .then(function(r){return r.json()})
+    .then(function(j){ S.utts=j.rows||[]; renderEdit(); })
+    .catch(function(e){ $('#body').innerHTML='<div class="err">加载逐句失败：'+esc(e.message)+'</div>' });
+}
+
+function markCurrent(t){
+  var idx=-1;
+  if(t!=null){
+    for(var i=0;i<S.paras.length;i++){
+      if(S.paras[i].t_start<=t && S.paras[i].t_end>=t){idx=i;break}
+    }
+  }
+  if(idx===S.cur) return;
+  var old=document.querySelector('.p.on'); if(old) old.classList.remove('on');
+  S.cur=idx;
+  if(idx>=0){
+    var el=document.querySelector('.p[data-i="'+idx+'"]');
+    if(el) el.classList.add('on');
+  }
+}
+
+function seekTo(t, playNow){
+  var a=S.audio;
+  if(!a||!a.src){ if(playNow) toastOnHost('本场没有原始音频，无法定位播放'); return }
+  try{ a.currentTime=Math.max(0,t) }catch(e){}
+  if(playNow){ a.play().catch(function(){}); }
+  markCurrent(t);
+  paint();
+}
+function paint(){
+  var a=S.audio; if(!a) return;
+  var dur=(isFinite(a.duration)&&a.duration>0)?a.duration:(S.data?S.data.session.duration_s:0);
+  $('#cur').textContent=fmt(a.currentTime||0);
+  $('#dur').textContent=fmt(dur||0);
+  var v=dur?Math.round((a.currentTime||0)/dur*1000):0;
+  $('#seek').value=v;
+  $('#play').textContent=a.paused?'▶':'⏸';
+}
+function toastOnHost(msg){
+  var d=document.createElement('div');
+  d.textContent=msg;
+  d.style.cssText='position:fixed;left:50%;top:18px;transform:translateX(-50%);background:#1d2330;'
+    +'color:#fff;padding:8px 16px;border-radius:8px;font-size:12.5px;z-index:99';
+  document.body.appendChild(d);
+  setTimeout(function(){d.remove()},2200);
+}
+
+function load(){
+  var url='/api/reader?session_id='+encodeURIComponent(S.sid);
+  if(S.speakers.length) url+='&speakers='+encodeURIComponent(S.speakers.join(','));
+  if(S.excludeLow) url+='&exclude_low=1';
+  fetch(url).then(function(r){return r.json()}).then(function(d){
+    if(d.error){ $('#body').innerHTML='<div class="err">'+esc(d.error)+'</div>'; return }
+    S.data=d;
+    wallInit(d.session);
+    if(!S.speakers.length) S.speakers=(d.speakers||[]).map(function(p){return p.speaker_id});
+    render();
+    if(S.edit) loadEdit();
+  }).catch(function(e){
+    $('#body').innerHTML='<div class="err">加载失败：'+esc(e.message)+'</div>';
+  });
+}
+
+function initAudio(d){
+  var a=$('#audio');
+  if(!d.session.audio_path){ $('#player').classList.remove('show'); return }
+  S.audio=a;
+  a.src='/api/audio?session_id='+encodeURIComponent(S.sid);
+  $('#player').classList.add('show');
+  a.addEventListener('timeupdate',function(){ paint(); markCurrent(a.currentTime) });
+  a.addEventListener('loadedmetadata',function(){
+    paint();
+    if(S.seekT>0){ seekTo(S.seekT,false); S.seekT=0 }
+  });
+  a.addEventListener('play',paint);
+  a.addEventListener('pause',paint);
+  $('#play').onclick=function(){ if(a.paused) a.play().catch(function(){}); else a.pause() };
+  $('#seek').oninput=function(e){
+    var dur=(isFinite(a.duration)&&a.duration>0)?a.duration:0;
+    if(dur) a.currentTime=Number(e.target.value)/1000*dur;
+  };
+  document.addEventListener('keydown',function(e){
+    if(e.target&&/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
+    if(e.code==='Space'){ e.preventDefault(); if(a.paused) a.play().catch(function(){}); else a.pause() }
+  });
+}
+
+function doRename(){
+  fetch('/api/sessions/suggest_title?session_id='+encodeURIComponent(S.sid))
+    .then(function(r){return r.json()})
+    .then(function(s){
+      var tip=s.title?('建议：'+s.title):'';
+      var v=prompt('给这场起个名字'+(tip?('\n'+tip):'')+'\n（留空则不改）',
+        (S.data&&S.data.session.title)||'');
+      if(v==null) return;
+      v=v.trim(); if(!v) return;
+      fetch('/api/sessions/rename',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({session_id:S.sid,title:v})})
+        .then(function(r){return r.json()})
+        .then(function(d){
+          if(d.error) return toastOnHost(d.error);
+          S.data.session.title=d.session.title; render(); toastOnHost('已改名');
+        });
+    });
+}
+
+(function boot(){
+  S.sid=qs();
+  S.seekT=qt();
+  if(!S.sid){ document.body.innerHTML='<div class="wrap"><div class="err">缺少 session 参数，请从主页点「阅读」进入</div></div>'; return }
+  $('#back').href='/?session='+encodeURIComponent(S.sid);
+  $('#btnHi').href='/highlights?session='+encodeURIComponent(S.sid);
+  $('#btnEdit').onclick=function(){
+    S.edit=!S.edit;
+    this.textContent=S.edit?'✓ 结束校对':'✎ 校对';
+    if(S.edit){ $('#filters').innerHTML=''; loadEdit(); } else { load(); }
+  };
+  $('#btnRename').onclick=doRename;
+  $('#btnPolish').onclick=function(){togglePolish(false)};
+  $('#btnRepolish').onclick=function(){
+    if(!confirm('重新润色这一场？会用当前模型把全部段落重跑一遍。'))return;
+    togglePolish(true);
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('#polishModes button'),function(b){
+    b.onclick=function(){setMode(b.dataset.m)};
+  });
+  $('#btnMd').onclick=function(){ location.href='/api/export?session_id='+encodeURIComponent(S.sid)+'&format=md' };
+  $('#btnSrt').onclick=function(){ location.href='/api/export?session_id='+encodeURIComponent(S.sid)+'&format=srt' };
+  fetch('/api/reader?session_id='+encodeURIComponent(S.sid))
+    .then(function(r){return r.json()})
+    .then(function(d){
+      if(d.error){ $('#body').innerHTML='<div class="err">'+esc(d.error)+'</div>'; return }
+      S.data=d; wallInit(d.session);
+      S.speakers=(d.speakers||[]).map(function(p){return p.speaker_id});
+      initAudio(d); render();
+      fetch('/api/polish?session_id='+encodeURIComponent(S.sid))
+        .then(function(r){return r.json()})
+        .then(function(p){
+          if(p&&p.ok&&p.paragraphs&&p.paragraphs.length){
+            var m={};
+            p.paragraphs.forEach(function(x){if(x&&x.i!=null)m[x.i]=x.text});
+            S.polished=m;S.polishEngine=p.engine||'';
+          }
+          paintSeg();
+        }).catch(function(){});
+    })
+    .catch(function(e){ $('#body').innerHTML='<div class="err">加载失败：'+esc(e.message)+'</div>' });
+})();
+</script>
+</body>
+</html>
